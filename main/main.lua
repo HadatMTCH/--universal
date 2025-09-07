@@ -36,7 +36,7 @@ local objectEsp = loadstring(game:HttpGet("https://raw.githubusercontent.com/Had
 objectEsp.CreateTab(Window)
 
 local monsterEsp = loadstring(game:HttpGet("https://raw.githubusercontent.com/HadatMTCH/--universal/refs/heads/master/main/pressure/esp/monster.lua"))()
-monsterEsp.CreateTab(Window)
+monsterEsp.CreateTab(Window, Rayfield)
 
 -- ===================================================================
 -- 3. FINAL SETUP

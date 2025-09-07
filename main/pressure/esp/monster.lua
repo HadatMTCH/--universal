@@ -1,6 +1,6 @@
 local Module = {}
 
-function Module.CreateTab(Window)
+function Module.CreateTab(Window, Rayfield)
     -- ===================================================================
     -- NPC/MONSTER ESP MODULE
     -- ===================================================================
@@ -21,12 +21,6 @@ function Module.CreateTab(Window)
         Glow_Transparency = 0.7,
         
         MonsterTypes = {
-            -- Original Monsters
-            ["Zombie"] = { Color = Color3.fromRGB(100, 150, 80) },
-            ["Skeleton"] = { Color = Color3.fromRGB(200, 200, 200) },
-            ["Slime"] = { Color = Color3.fromRGB(80, 220, 80) },
-            ["Boss"] = { Color = Color3.fromRGB(255, 220, 0) },
-
             -- Extended Monster List
             ["Angler"] = { Color = Color3.fromRGB(240, 240, 240) },
             ["Pinkie"] = { Color = Color3.fromRGB(240, 240, 240) },
