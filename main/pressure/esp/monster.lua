@@ -105,7 +105,7 @@ function Module.CreateTab(Window, Rayfield)
                 Rayfield:Notify({
                     Title = "Monster Spawned",
                     Content = string.format("A(n) %s has appeared.", model.Name),
-                    Image = "ghost",
+                    Image = "info",
                     Duration = 5
                 })
             end
@@ -137,7 +137,7 @@ function Module.CreateTab(Window, Rayfield)
             Rayfield:Notify({
                 Title = "Test Notification",
                 Content = "This is a test of the notification system.",
-                Image = "information",
+                Image = "info",
                 Duration = 5
             })
         end
