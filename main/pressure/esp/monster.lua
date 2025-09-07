@@ -2,7 +2,8 @@ local Module = {}
 
 function Module.CreateTab(Window, Rayfield)
     -- ===================================================================
-    -- NPC/MONSTER ESP MODULE
+    -- DUAL-SYSTEM NPC/MONSTER ESP MODULE
+    -- Handles both Humanoid-based models and custom Part-based monsters.
     -- ===================================================================
     local Workspace = game:GetService("Workspace")
     local Players = game:GetService("Players")
@@ -20,8 +21,8 @@ function Module.CreateTab(Window, Rayfield)
         Default_Color = Color3.fromRGB(255, 80, 80),
         Glow_Transparency = 0.7,
         
+        -- Your collected list of all monster names
         MonsterTypes = {
-            -- Extended Monster List
             ["Angler"] = { Color = Color3.fromRGB(240, 240, 240) },
             ["Pinkie"] = { Color = Color3.fromRGB(240, 240, 240) },
             ["Blitz"] = { Color = Color3.fromRGB(240, 240, 240) },
@@ -37,96 +38,184 @@ function Module.CreateTab(Window, Rayfield)
         }
     }
 
+    -- Redesigned state to handle different monster types and their data
     local NPC_ESP_State = { TrackedNPCs = {} }
     
     local NPC_ESP_ScreenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
     NPC_ESP_ScreenGui.Name = "NPC_ESP_Gui"
     NPC_ESP_ScreenGui.ResetOnSpawn = false
 
-    local function createVisualsForMonster(monster)
+    -- Universal cleanup function
+    local function cleanupMonsterVisuals(monster)
+        if NPC_ESP_State.TrackedNPCs[monster] then
+            local data = NPC_ESP_State.TrackedNPCs[monster]
+            if data.Visuals.Glow and data.Visuals.Glow.Parent then data.Visuals.Glow.Parent:Destroy() end
+            if data.Visuals.Billboard and data.Visuals.Billboard.Parent then data.Visuals.Billboard:Destroy() end
+            if data.DeathConnection then data.DeathConnection:Disconnect() end
+            NPC_ESP_State.TrackedNPCs[monster] = nil
+        end
+    end
+
+    -- Universal function to create visuals for any monster type
+    local function createVisualsForMonster(monster, adornee)
         if NPC_ESP_State.TrackedNPCs[monster] then return end
         
         local visuals = {}
         local espFolder = Instance.new("Folder", monster); espFolder.Name = "NPC_ESP_Visuals"
 
-        visuals.Glow = Instance.new("Highlight", espFolder); visuals.Glow.Name = "NPC_ESP_Glow"; visuals.Glow.Adornee = monster; visuals.Glow.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-        visuals.Glow.FillTransparency = NPC_ESP_Config.Glow_Transparency; visuals.Glow.OutlineTransparency = 1; visuals.Glow.Enabled = false
+        visuals.Glow = Instance.new("Highlight", espFolder)
+        visuals.Glow.Adornee = monster
+        visuals.Glow.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+        visuals.Glow.FillTransparency = NPC_ESP_Config.Glow_Transparency
+        visuals.Glow.OutlineTransparency = 1
+        visuals.Glow.Enabled = false
 
-        visuals.Billboard = Instance.new("BillboardGui", NPC_ESP_ScreenGui); visuals.Billboard.Name = "NPC_ESP_Billboard"; visuals.Billboard.AlwaysOnTop = true; visuals.Billboard.Size = UDim2.new(0, 200, 0, 80)
-        visuals.Billboard.StudsOffset = Vector3.new(0, 3, 0); visuals.Billboard.Enabled = false
+        visuals.Billboard = Instance.new("BillboardGui", NPC_ESP_ScreenGui)
+        visuals.Billboard.Adornee = adornee
+        visuals.Billboard.AlwaysOnTop = true
+        visuals.Billboard.Size = UDim2.new(0, 200, 0, 80)
+        visuals.Billboard.StudsOffset = Vector3.new(0, 3, 0)
+        visuals.Billboard.Enabled = false
         
-        local listLayout = Instance.new("UIListLayout", visuals.Billboard); listLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center; listLayout.SortOrder = Enum.SortOrder.LayoutOrder; listLayout.Padding = UDim.new(0, 2)
+        local listLayout = Instance.new("UIListLayout", visuals.Billboard)
+        listLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+        listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+        listLayout.Padding = UDim.new(0, 2)
         
-        visuals.NameLabel = Instance.new("TextLabel", visuals.Billboard); visuals.NameLabel.Name = "NameLabel"; visuals.NameLabel.Size = UDim2.new(1, 0, 0, 20); visuals.NameLabel.LayoutOrder = 1
-        visuals.NameLabel.BackgroundTransparency = 1; visuals.NameLabel.Font = Enum.Font.GothamBold; visuals.NameLabel.TextSize = 18; visuals.NameLabel.TextStrokeTransparency = 0; visuals.NameLabel.Text = monster.Name
+        visuals.NameLabel = Instance.new("TextLabel", visuals.Billboard)
+        visuals.NameLabel.Size = UDim2.new(1, 0, 0, 20)
+        visuals.NameLabel.LayoutOrder = 1
+        visuals.NameLabel.BackgroundTransparency = 1
+        visuals.NameLabel.Font = Enum.Font.GothamBold
+        visuals.NameLabel.TextSize = 18
+        visuals.NameLabel.TextStrokeTransparency = 0
+        visuals.NameLabel.Text = monster.Name
         
-        visuals.DistanceLabel = Instance.new("TextLabel", visuals.Billboard); visuals.DistanceLabel.Name = "DistanceLabel"; visuals.DistanceLabel.Size = UDim2.new(1, 0, 0, 15); visuals.DistanceLabel.LayoutOrder = 2
-        visuals.DistanceLabel.BackgroundTransparency = 1; visuals.DistanceLabel.Font = Enum.Font.Gotham; visuals.DistanceLabel.TextSize = 14; visuals.DistanceLabel.TextColor3 = Color3.new(1, 1, 1)
+        visuals.DistanceLabel = Instance.new("TextLabel", visuals.Billboard)
+        visuals.DistanceLabel.Size = UDim2.new(1, 0, 0, 15)
+        visuals.DistanceLabel.LayoutOrder = 2
+        visuals.DistanceLabel.BackgroundTransparency = 1
+        visuals.DistanceLabel.Font = Enum.Font.Gotham
+        visuals.DistanceLabel.TextSize = 14
+        visuals.DistanceLabel.TextColor3 = Color3.new(1, 1, 1)
 
-        visuals.HealthBar = Instance.new("Frame", visuals.Billboard); visuals.HealthBar.Name = "HealthBar"; visuals.HealthBar.Size = UDim2.new(1, 0, 0, 8); visuals.HealthBar.LayoutOrder = 3
-        visuals.HealthBar.BackgroundColor3 = Color3.fromRGB(20, 20, 20); visuals.HealthBar.BorderSizePixel = 0
+        visuals.HealthBar = Instance.new("Frame", visuals.Billboard)
+        visuals.HealthBar.Size = UDim2.new(1, 0, 0, 8)
+        visuals.HealthBar.LayoutOrder = 3
+        visuals.HealthBar.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+        visuals.HealthBar.BorderSizePixel = 0
         
-        visuals.HealthFill = Instance.new("Frame", visuals.HealthBar); visuals.HealthFill.Name = "HealthFill"; visuals.HealthFill.Size = UDim2.fromScale(1, 1); visuals.HealthFill.BackgroundColor3 = Color3.fromRGB(0, 255, 0); visuals.HealthFill.BorderSizePixel = 0
+        visuals.HealthFill = Instance.new("Frame", visuals.HealthBar)
+        visuals.HealthFill.Size = UDim2.fromScale(1, 1)
+        visuals.HealthFill.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+        visuals.HealthFill.BorderSizePixel = 0
         
-        NPC_ESP_State.TrackedNPCs[monster] = visuals
+        return visuals
     end
-
+    
+    -- NEW: Universal update function for all monster types
     local function updateMonsterVisuals(monster, data)
-        local hrp = monster:FindFirstChild("HumanoidRootPart"); local humanoid = monster:FindFirstChildOfClass("Humanoid")
-        if not (hrp and humanoid and humanoid.Health > 0) then if data.Billboard.Enabled then data.Billboard.Enabled = false; data.Glow.Enabled = false end; return end
-        
+        -- Get position from the adornee we set earlier
+        local adornee = data.Visuals.Billboard.Adornee
+        if not (adornee and adornee.Parent) then return end
+
         local monsterTypeConfig = NPC_ESP_Config.MonsterTypes[monster.Name]
         local color = (monsterTypeConfig and monsterTypeConfig.Color) or NPC_ESP_Config.Default_Color
         
-        data.Glow.Enabled = NPC_ESP_Config.Glow_Enabled; data.Glow.FillColor = color; data.Glow.FillTransparency = NPC_ESP_Config.Glow_Transparency
+        data.Visuals.Glow.Enabled = NPC_ESP_Config.Glow_Enabled
+        data.Visuals.Glow.FillColor = color
+        data.Visuals.Glow.FillTransparency = NPC_ESP_Config.Glow_Transparency
         
-        data.Billboard.Enabled = NPC_ESP_Config.Name_Enabled or NPC_ESP_Config.Health_Enabled or NPC_ESP_Config.Distance_Enabled; data.Billboard.Adornee = hrp
-        data.NameLabel.Visible = NPC_ESP_Config.Name_Enabled; data.NameLabel.TextColor3 = color
-        data.HealthBar.Visible = NPC_ESP_Config.Health_Enabled
-        
-        local healthPercent = humanoid.Health / humanoid.MaxHealth
-        data.HealthFill.Size = UDim2.fromScale(healthPercent, 1); data.HealthFill.BackgroundColor3 = Color3.fromHSV(healthPercent * 0.33, 1, 1)
-        
-        local distance = (Camera.CFrame.Position - hrp.Position).Magnitude
-        data.DistanceLabel.Visible = NPC_ESP_Config.Distance_Enabled; data.DistanceLabel.Text = string.format("%dM", distance)
-    end
+        data.Visuals.Billboard.Enabled = NPC_ESP_Config.Name_Enabled or NPC_ESP_Config.Health_Enabled or NPC_ESP_Config.Distance_Enabled
+        data.Visuals.NameLabel.Visible = NPC_ESP_Config.Name_Enabled
+        data.Visuals.NameLabel.TextColor3 = color
+        data.Visuals.HealthBar.Visible = NPC_ESP_Config.Health_Enabled
 
-    local function cleanupMonsterVisuals(monster)
-        if NPC_ESP_State.TrackedNPCs[monster] then
-            local data = NPC_ESP_State.TrackedNPCs[monster]; if data.Glow.Parent then data.Glow.Parent:Destroy() end; data.Billboard:Destroy(); NPC_ESP_State.TrackedNPCs[monster] = nil
+        -- Health calculation depends on the monster's type
+        local health, maxHealth = 1, 1
+        if data.Type == "Humanoid" then
+            local humanoid = monster:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                health, maxHealth = humanoid.Health, humanoid.MaxHealth
+            end
+        elseif data.Type == "Custom" then
+            health = monster:GetAttribute("Health") or 0
+            maxHealth = monster:GetAttribute("MaxHealth") or 1
         end
+
+        if maxHealth == 0 then maxHealth = 1 end -- Avoid division by zero
+        local healthPercent = math.clamp(health / maxHealth, 0, 1)
+        data.Visuals.HealthFill.Size = UDim2.fromScale(healthPercent, 1)
+        data.Visuals.HealthFill.BackgroundColor3 = Color3.fromHSV(healthPercent * 0.33, 1, 1)
+        
+        local distance = (Camera.CFrame.Position - adornee.Position).Magnitude
+        data.Visuals.DistanceLabel.Visible = NPC_ESP_Config.Distance_Enabled
+        data.Visuals.DistanceLabel.Text = string.format("%dM", distance)
     end
 
-    local function checkAndTrackMonster(model)
-        if model:IsA("Model") and model:FindFirstChildOfClass("Humanoid") and not Players:GetPlayerFromCharacter(model) then
-            createVisualsForMonster(model)
+    -- NEW: Main detection function that checks for any monster type
+    local function checkAndTrackObject(object)
+        if NPC_ESP_State.TrackedNPCs[object] then return end -- Already tracking
+
+        -- TYPE 1: Humanoid-based Monster
+        if object:IsA("Model") and object:FindFirstChildOfClass("Humanoid") and not Players:GetPlayerFromCharacter(object) then
+            local humanoid = object:FindFirstChildOfClass("Humanoid")
+            local hrp = object:FindFirstChild("HumanoidRootPart")
+            if not hrp then return end -- Needs a root part to attach visuals to
+
+            local visuals = createVisualsForMonster(object, hrp)
+            local deathConnection = humanoid.Died:Connect(function() cleanupMonsterVisuals(object) end)
+            NPC_ESP_State.TrackedNPCs[object] = { Visuals = visuals, Type = "Humanoid", DeathConnection = deathConnection }
             
             if NPC_ESP_Config.Spawn_Notifications then
-                Rayfield:Notify({
-                    Title = "Monster Spawned",
-                    Content = string.format("A(n) %s has appeared.", model.Name),
-                    Image = "info",
-                    Duration = 5
-                })
+                Rayfield:Notify({ Title = "Monster Spawned", Content = string.format("A(n) %s has appeared.", object.Name), Image = "info", Duration = 5 })
             end
+        
+        -- TYPE 2: Custom Part-based Monster
+        elseif object:IsA("BasePart") and NPC_ESP_Config.MonsterTypes[object.Name] then
+             -- Prevent tracking a part of an already tracked Humanoid monster
+            if object.Parent and NPC_ESP_State.TrackedNPCs[object.Parent] then return end
 
-            local humanoid = model:FindFirstChildOfClass("Humanoid")
-            humanoid.Died:Connect(function()
-                cleanupMonsterVisuals(model)
+            local visuals = createVisualsForMonster(object, object)
+            -- For custom parts, we detect death by listening to attribute changes or ancestry changes
+            local deathConnection = object.AncestryChanged:Connect(function(_, parent)
+                if not parent then cleanupMonsterVisuals(object) end
             end)
+            
+            NPC_ESP_State.TrackedNPCs[object] = { Visuals = visuals, Type = "Custom", DeathConnection = deathConnection }
+
+            if NPC_ESP_Config.Spawn_Notifications then
+                Rayfield:Notify({ Title = "Monster Spawned", Content = string.format("A(n) %s has appeared.", object.Name), Image = "info", Duration = 5 })
+            end
         end
     end
 
-    Workspace.ChildAdded:Connect(checkAndTrackMonster)
+    Workspace.ChildAdded:Connect(checkAndTrackObject)
     for _, child in ipairs(Workspace:GetChildren()) do
-        checkAndTrackMonster(child)
+        checkAndTrackObject(child)
     end
 
     RunService.RenderStepped:Connect(function()
-        if not NPC_ESP_Config.Enabled then for _, d in pairs(NPC_ESP_State.TrackedNPCs) do if d.Glow.Enabled then d.Glow.Enabled=false end;if d.Billboard.Enabled then d.Billboard.Enabled=false end end; return end
-        Camera = workspace.CurrentCamera; for m, d in pairs(NPC_ESP_State.TrackedNPCs) do pcall(updateMonsterVisuals, m, d) end
+        if not NPC_ESP_Config.Enabled then
+            for _, data in pairs(NPC_ESP_State.TrackedNPCs) do
+                if data.Visuals.Glow.Enabled then data.Visuals.Glow.Enabled = false end
+                if data.Visuals.Billboard.Enabled then data.Visuals.Billboard.Enabled = false end
+            end
+            return
+        end
+
+        Camera = workspace.CurrentCamera
+        for monster, data in pairs(NPC_ESP_State.TrackedNPCs) do
+            -- Cleanup if monster is destroyed but not caught by death event
+            if not monster or not monster.Parent then
+                cleanupMonsterVisuals(monster)
+            else
+                pcall(updateMonsterVisuals, monster, data)
+            end
+        end
     end)
     
+    -- UI Section (Unchanged)
     local NPC_ESPTab = Window:CreateTab("NPC ESP", "ghost")
     NPC_ESPTab:CreateToggle({ Name = "Enable NPC ESP", CurrentValue = NPC_ESP_Config.Enabled, Flag = "NPC_ESP_Enabled", Callback = function(v) NPC_ESP_Config.Enabled = v end })
     NPC_ESPTab:CreateToggle({ Name = "Enable Glow (Chams)", CurrentValue = NPC_ESP_Config.Glow_Enabled, Flag = "NPC_ESP_Glow", Callback = function(v) NPC_ESP_Config.Glow_Enabled = v end })
