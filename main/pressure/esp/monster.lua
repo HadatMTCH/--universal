@@ -129,20 +129,6 @@ function Module.CreateTab(Window, Rayfield)
     
     local NPC_ESPTab = Window:CreateTab("NPC ESP", "ghost")
     local ESP_Section = NPC_ESPTab:CreateSection("NPC/Monster ESP Settings")
-
-    -- NEW: Test button for notifications
-    ESP_Section:CreateButton({
-        Name = "Test Notification",
-        Callback = function()
-            Rayfield:Notify({
-                Title = "Test Notification",
-                Content = "This is a test of the notification system.",
-                Image = "info",
-                Duration = 5
-            })
-        end
-    })
-
     ESP_Section:CreateToggle({ Name = "Enable NPC ESP", CurrentValue = NPC_ESP_Config.Enabled, Flag = "NPC_ESP_Enabled", Callback = function(v) NPC_ESP_Config.Enabled = v end })
     ESP_Section:CreateToggle({ Name = "Enable Glow (Chams)", CurrentValue = NPC_ESP_Config.Glow_Enabled, Flag = "NPC_ESP_Glow", Callback = function(v) NPC_ESP_Config.Glow_Enabled = v end })
     ESP_Section:CreateToggle({ Name = "Show Name", CurrentValue = NPC_ESP_Config.Name_Enabled, Flag = "NPC_ESP_Name", Callback = function(v) NPC_ESP_Config.Name_Enabled = v end })
