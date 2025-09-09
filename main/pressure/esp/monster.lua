@@ -1,6 +1,6 @@
 local Module = {}
 
-function Module.CreateTab(Window, Rayfield)
+function Module.CreateTab(Window, Alert)
     -- ===================================================================
     -- DUAL-SYSTEM NPC/MONSTER ESP MODULE
     -- Handles both Humanoid-based models and custom Part-based monsters.
@@ -168,7 +168,8 @@ function Module.CreateTab(Window, Rayfield)
             NPC_ESP_State.TrackedNPCs[object] = { Visuals = visuals, Type = "Humanoid", DeathConnection = deathConnection }
             
             if NPC_ESP_Config.Spawn_Notifications then
-                Rayfield:Notify({ Title = "Monster Spawned", Content = string.format("A(n) %s has appeared.", object.Name), Image = "info", Duration = 5 })
+                Alert:ConfigureAlerts({ position = "Center" })
+                Alert:SendAlert({ title = "Monster Spawned!", content = string.format("A(n) %s has appeared.", object.Name), type = "danger", duration = 5 })
             end
         
         -- TYPE 2: Custom Part-based Monster
@@ -185,7 +186,8 @@ function Module.CreateTab(Window, Rayfield)
             NPC_ESP_State.TrackedNPCs[object] = { Visuals = visuals, Type = "Custom", DeathConnection = deathConnection }
 
             if NPC_ESP_Config.Spawn_Notifications then
-                Rayfield:Notify({ Title = "Monster Spawned", Content = string.format("A(n) %s has appeared.", object.Name), Image = "info", Duration = 5 })
+                Alert:ConfigureAlerts({ position = "Center" })
+                Alert:SendAlert({ title = "Monster Spawned!", content = string.format("A(n) %s has appeared.", object.Name), type = "danger", duration = 5 })
             end
         end
     end
