@@ -101,35 +101,35 @@ function Module.CreateTab(Window, Sense)
     -- ===================================================================
     -- ENEMY SETTINGS
     -- ===================================================================
-    local EnemySection = SenseTab:CreateSection("Enemy Settings")
-    CreateTeamSettings(EnemySection, Sense.teamSettings.enemy)
+    SenseTab:CreateSection("Enemy Settings")
+    CreateTeamSettings(SenseTab, Sense.teamSettings.enemy)
 
     -- ===================================================================
     -- FRIENDLY SETTINGS
     -- ===================================================================
-    local FriendlySection = SenseTab:CreateSection("Friendly Settings")
-    CreateTeamSettings(FriendlySection, Sense.teamSettings.friendly)
+    SenseTab:CreateSection("Friendly Settings")
+    CreateTeamSettings(SenseTab, Sense.teamSettings.friendly)
 
     -- ===================================================================
     -- SHARED SETTINGS
     -- ===================================================================
-    local SharedSection = SenseTab:CreateSection("Shared Settings")
+    SenseTab:CreateSection("Shared Settings")
 
-    SharedSection:CreateToggle({
+    SenseTab:CreateToggle({
         Name = "Use Team Color",
         CurrentValue = Sense.sharedSettings.useTeamColor,
         Flag = "Sense_Shared_UseTeamColor",
         Callback = function(v) Sense.sharedSettings.useTeamColor = v end
     })
 
-    SharedSection:CreateToggle({
+    SenseTab:CreateToggle({
         Name = "Limit Distance",
         CurrentValue = Sense.sharedSettings.limitDistance,
         Flag = "Sense_Shared_LimitDistance",
         Callback = function(v) Sense.sharedSettings.limitDistance = v end
     })
 
-    SharedSection:CreateSlider({
+    SenseTab:CreateSlider({
         Name = "Max Distance",
         Range = {50, 2000},
         Increment = 50,
@@ -139,7 +139,7 @@ function Module.CreateTab(Window, Sense)
         Callback = function(v) Sense.sharedSettings.maxDistance = v end
     })
     
-    SharedSection:CreateSlider({
+    SenseTab:CreateSlider({
         Name = "Text Size",
         Range = {10, 24},
         Increment = 1,
