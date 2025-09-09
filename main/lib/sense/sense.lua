@@ -255,7 +255,7 @@ function EspObject:Render()
 
 	visible.box.Visible = enabled and onScreen and options.box;
 	visible.boxOutline.Visible = visible.box.Visible and options.boxOutline;
-	if visible.box.Visible then
+	if visible.box.Visible and corners then -- ADDED 'and corners'
 		local box = visible.box;
 		box.Position = corners.topLeft;
 		box.Size = corners.bottomRight - corners.topLeft;
@@ -270,7 +270,7 @@ function EspObject:Render()
 	end
 
 	visible.boxFill.Visible = enabled and onScreen and options.boxFill;
-	if visible.boxFill.Visible then
+	if visible.boxFill.Visible and corners then -- ADDED 'and corners'
 		local boxFill = visible.boxFill;
 		boxFill.Position = corners.topLeft;
 		boxFill.Size = corners.bottomRight - corners.topLeft;
@@ -280,7 +280,7 @@ function EspObject:Render()
 
 	visible.healthBar.Visible = enabled and onScreen and options.healthBar;
 	visible.healthBarOutline.Visible = visible.healthBar.Visible and options.healthBarOutline;
-	if visible.healthBar.Visible then
+	if visible.healthBar.Visible and corners then -- ADDED 'and corners'
 		local barFrom = corners.topLeft - HEALTH_BAR_OFFSET;
 		local barTo = corners.bottomLeft - HEALTH_BAR_OFFSET;
 
@@ -297,7 +297,7 @@ function EspObject:Render()
 	end
 
 	visible.healthText.Visible = enabled and onScreen and options.healthText;
-	if visible.healthText.Visible then
+	if visible.healthText.Visible and corners then -- ADDED 'and corners'
 		local barFrom = corners.topLeft - HEALTH_BAR_OFFSET;
 		local barTo = corners.bottomLeft - HEALTH_BAR_OFFSET;
 
@@ -313,7 +313,7 @@ function EspObject:Render()
 	end
 
 	visible.name.Visible = enabled and onScreen and options.name;
-	if visible.name.Visible then
+	if visible.name.Visible and corners then -- ADDED 'and corners'
 		local name = visible.name;
 		name.Size = interface.sharedSettings.textSize;
 		name.Font = interface.sharedSettings.textFont;
@@ -325,7 +325,7 @@ function EspObject:Render()
 	end
 
 	visible.distance.Visible = enabled and onScreen and self.distance and options.distance;
-	if visible.distance.Visible then
+	if visible.distance.Visible and corners then -- ADDED 'and corners'
 		local distance = visible.distance;
 		distance.Text = round(self.distance) .. " studs";
 		distance.Size = interface.sharedSettings.textSize;
@@ -338,7 +338,7 @@ function EspObject:Render()
 	end
 
 	visible.weapon.Visible = enabled and onScreen and options.weapon;
-	if visible.weapon.Visible then
+	if visible.weapon.Visible and corners then -- ADDED 'and corners'
 		local weapon = visible.weapon;
 		weapon.Text = self.weapon;
 		weapon.Size = interface.sharedSettings.textSize;
@@ -354,7 +354,7 @@ function EspObject:Render()
 
 	visible.tracer.Visible = enabled and onScreen and options.tracer;
 	visible.tracerOutline.Visible = visible.tracer.Visible and options.tracerOutline;
-	if visible.tracer.Visible then
+	if visible.tracer.Visible and corners then -- ADDED 'and corners'
 		local tracer = visible.tracer;
 		tracer.Color = parseColor(self, options.tracerColor[1]);
 		tracer.Transparency = options.tracerColor[2];
@@ -399,7 +399,7 @@ function EspObject:Render()
 			line.Transparency = options.box3dColor[2];
 		end
 
-		if box3dEnabled then
+		if box3dEnabled and corners then -- ADDED 'and corners'
 			local line1 = face[1];
 			line1.From = corners.corners[i];
 			line1.To = corners.corners[i == 4 and 1 or i+1];
@@ -414,7 +414,6 @@ function EspObject:Render()
 		end
 	end
 end
-
 -- cham object
 local ChamObject = {};
 ChamObject.__index = ChamObject;
