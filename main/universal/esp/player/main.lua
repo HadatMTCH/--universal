@@ -1,8 +1,20 @@
 local Module = {}
 
--- UPDATED: This function now accepts the 'tab' object instead of the 'section' object.
+-- NEW: A palette of predefined colors for the dropdown menus
+local ColorPalette = {
+    ["Red"] = Color3.fromRGB(255, 60, 60),
+    ["Green"] = Color3.fromRGB(60, 255, 60),
+    ["Blue"] = Color3.fromRGB(60, 150, 255),
+    ["Yellow"] = Color3.fromRGB(255, 255, 60),
+    ["Cyan"] = Color3.fromRGB(60, 255, 255),
+    ["Magenta"] = Color3.fromRGB(255, 60, 255),
+    ["White"] = Color3.fromRGB(255, 255, 255),
+    ["Team Color"] = "Team Color" -- This is a special string that the Sense library understands
+}
+local ColorNames = {"Red", "Green", "Blue", "Yellow", "Cyan", "Magenta", "White", "Team Color"}
+
+
 local function CreateTeamSettings(tab, settingsTable)
-    -- UPDATED: All UI elements are now created on the 'tab' object.
     tab:CreateToggle({
         Name = "Enabled",
         CurrentValue = settingsTable.enabled,
@@ -14,10 +26,12 @@ local function CreateTeamSettings(tab, settingsTable)
         CurrentValue = settingsTable.box,
         Callback = function(v) settingsTable.box = v end
     })
-    tab:CreateColorpicker({
+    -- UPDATED: Replaced Colorpicker with a Dropdown
+    tab:CreateDropdown({
         Name = "Box Color",
-        Color = settingsTable.boxColor[1],
-        Callback = function(c) settingsTable.boxColor[1] = c end
+        Options = ColorNames,
+        CurrentValue = "Red",
+        Callback = function(c) settingsTable.boxColor[1] = ColorPalette[c] end
     })
 
     tab:CreateToggle({
@@ -25,10 +39,12 @@ local function CreateTeamSettings(tab, settingsTable)
         CurrentValue = settingsTable.name,
         Callback = function(v) settingsTable.name = v end
     })
-    tab:CreateColorpicker({
+    -- UPDATED: Replaced Colorpicker with a Dropdown
+    tab:CreateDropdown({
         Name = "Name Color",
-        Color = settingsTable.nameColor[1],
-        Callback = function(c) settingsTable.nameColor[1] = c end
+        Options = ColorNames,
+        CurrentValue = "White",
+        Callback = function(c) settingsTable.nameColor[1] = ColorPalette[c] end
     })
 
     tab:CreateToggle({
@@ -42,10 +58,12 @@ local function CreateTeamSettings(tab, settingsTable)
         CurrentValue = settingsTable.tracer,
         Callback = function(v) settingsTable.tracer = v end
     })
-    tab:CreateColorpicker({
+    -- UPDATED: Replaced Colorpicker with a Dropdown
+    tab:CreateDropdown({
         Name = "Tracer Color",
-        Color = settingsTable.tracerColor[1],
-        Callback = function(c) settingsTable.tracerColor[1] = c end
+        Options = ColorNames,
+        CurrentValue = "Red",
+        Callback = function(c) settingsTable.tracerColor[1] = ColorPalette[c] end
     })
     tab:CreateDropdown({
         Name = "Tracer Origin",
@@ -79,10 +97,12 @@ local function CreateTeamSettings(tab, settingsTable)
         CurrentValue = settingsTable.chams,
         Callback = function(v) settingsTable.chams = v end
     })
-    tab:CreateColorpicker({
+    -- UPDATED: Replaced Colorpicker with a Dropdown
+    tab:CreateDropdown({
         Name = "Chams Fill Color",
-        Color = settingsTable.chamsFillColor[1],
-        Callback = function(c) settingsTable.chamsFillColor[1] = c end
+        Options = ColorNames,
+        CurrentValue = "Red",
+        Callback = function(c) settingsTable.chamsFillColor[1] = ColorPalette[c] end
     })
     tab:CreateSlider({
         Name = "Chams Fill Transparency",
@@ -94,7 +114,6 @@ local function CreateTeamSettings(tab, settingsTable)
 end
 
 
--- UPDATED: The second argument is now named 'Sense' to avoid confusion.
 function Module.CreateTab(Window, Sense)
     
     local SenseTab = Window:CreateTab("Sense ESP", "eye")
@@ -103,22 +122,19 @@ function Module.CreateTab(Window, Sense)
     -- ENEMY SETTINGS
     -- ===================================================================
     SenseTab:CreateSection("Enemy Settings")
-    -- UPDATED: Pass the main 'SenseTab' to the helper function.
     CreateTeamSettings(SenseTab, Sense.teamSettings.enemy)
 
     -- ===================================================================
     -- FRIENDLY SETTINGS
     -- ===================================================================
     SenseTab:CreateSection("Friendly Settings")
-    -- UPDATED: Pass the main 'SenseTab' to the helper function.
     CreateTeamSettings(SenseTab, Sense.teamSettings.friendly)
 
     -- ===================================================================
     -- SHARED SETTINGS
     -- ===================================================================
-    local SharedSection = SenseTab:CreateSection("Shared Settings")
+    SenseTab:CreateSection("Shared Settings")
 
-    -- These are correct because they are called on the Tab (SenseTab), not the Section.
     SenseTab:CreateToggle({
         Name = "Use Team Color",
         CurrentValue = Sense.sharedSettings.useTeamColor,
