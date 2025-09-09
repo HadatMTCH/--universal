@@ -3,7 +3,8 @@
 -- ===================================================================
 local Rayfield =
     loadstring(game:HttpGet('https://raw.githubusercontent.com/SiriusSoftwareLtd/Rayfield/main/source.lua'))()
-local Sense = loadstring(game:HttpGet(".../lib/sense.lua"))()
+local Sense = loadstring(game:HttpGet("https://raw.githubusercontent.com/HadatMTCH/--universal/refs/heads/master/main/lib/sense/sense.lua"))()
+
 local Window = Rayfield:CreateWindow({
     Name = "Universal Script",
     LoadingTitle = "Universal Script",
@@ -20,7 +21,7 @@ local Window = Rayfield:CreateWindow({
 -- ===================================================================
 
 -- Load Player Modifier Module (Speed, Jump, etc.)
-local playerModifier = loadstring(game:HttpGet("https://raw.githubusercontent.com/HadatMTCH/--universal/refs/heads/m    aster/main/universal/player_modifier/main.lua"))()
+local playerModifier = loadstring(game:HttpGet("https://raw.githubusercontent.com/HadatMTCH/--universal/refs/heads/master/main/universal/player_modifier/main.lua"))()
 playerModifier.CreateTab(Window)
 
 -- Load Universal Scripts Module (Infinite Yield, Dex, etc.)
