@@ -1,6 +1,7 @@
+local Alert = loadstring(game:HttpGet('https://raw.githubusercontent.com/HadatMTCH/--universal/refs/heads/master/main/utils/alert.lua'))()
 local Module = {}
 
-function Module.CreateTab(Window, Alert)
+function Module.CreateTab(Window)
     -- ===================================================================
     -- DUAL-SYSTEM NPC/MONSTER ESP MODULE
     -- Handles both Humanoid-based models and custom Part-based monsters.
@@ -34,7 +35,9 @@ function Module.CreateTab(Window, Alert)
             ["RidgePinkie"] = { Color = Color3.fromRGB(240, 240, 240) },
             ["RidgeChainsmoker"] = { Color = Color3.fromRGB(240, 240, 240) },
             ["RidgeFroger"] = { Color = Color3.fromRGB(240, 240, 240) },
-            ["RidgePandemonium"] = { Color = Color3.fromRGB(240, 240, 240) }
+            ["RidgePandemonium"] = { Color = Color3.fromRGB(240, 240, 240) },
+            ["Pipsqueak"] = { Color = Color3.fromRGB(240, 240, 240) },
+            ["A60"] = { Color = Color3.fromRGB(240, 240, 240) }
         }
     }
 
