@@ -288,7 +288,11 @@ function EspObject:Render()
 		healthBar.To = barTo;
 		healthBar.From = lerp2(barTo, barFrom, self.health/self.maxHealth);
         
-        -- THIS IS THE CORRECTED PART --
+        --[[================================================================================
+            [!] THIS IS THE PERMANENT FIX FOR THE 'Color3 expected' ERROR
+            We MUST use parseColor on healthy/dying colors before passing them to lerpColor,
+            in case the user has selected the "Team Color" string from the dropdown.
+        ================================================================================]]
 		local dyingColor = parseColor(self, options.dyingColor)
 		local healthyColor = parseColor(self, options.healthyColor)
 		healthBar.Color = lerpColor(dyingColor, healthyColor, self.health/self.maxHealth);
@@ -419,6 +423,7 @@ function EspObject:Render()
 		end
 	end
 end
+
 -- cham object
 local ChamObject = {};
 ChamObject.__index = ChamObject;
@@ -553,6 +558,7 @@ local EspInterface = {
 			enabled = false,
 			box = false,
 			boxColor = { Color3.new(1,0,0), 1 },
+			--boxColor = { "Team Color", 1 }, -- Do this to change a single color to the team color
 			boxOutline = true,
 			boxOutlineColor = { Color3.new(), 1 },
 			boxFill = false,
