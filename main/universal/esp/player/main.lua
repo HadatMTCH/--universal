@@ -52,6 +52,20 @@ local function CreateTeamSettings(tab, settingsTable)
         CurrentValue = settingsTable.healthBar,
         Callback = function(v) settingsTable.healthBar = v end
     })
+    
+    tab:CreateDropdown({
+        Name = "Healthy Color",
+        Options = ColorNames,
+        CurrentValue = "Green",
+        Callback = function(c) settingsTable.healthyColor = ColorPalette[c] end
+    })
+
+    tab:CreateDropdown({
+        Name = "Dying Color",
+        Options = ColorNames,
+        CurrentValue = "Red",
+        Callback = function(c) settingsTable.dyingColor = ColorPalette[c] end
+    })
 
     tab:CreateToggle({
         Name = "Tracer",

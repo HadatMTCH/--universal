@@ -287,7 +287,9 @@ function EspObject:Render()
 		local healthBar = visible.healthBar;
 		healthBar.To = barTo;
 		healthBar.From = lerp2(barTo, barFrom, self.health/self.maxHealth);
-		healthBar.Color = lerpColor(options.dyingColor, options.healthyColor, self.health/self.maxHealth);
+		local dyingColor = parseColor(self, options.dyingColor)
+		local healthyColor = parseColor(self, options.healthyColor)
+		healthBar.Color = lerpColor(dyingColor, healthyColor, self.health/self.maxHealth);
 
 		local healthBarOutline = visible.healthBarOutline;
 		healthBarOutline.To = barTo + HEALTH_BAR_OUTLINE_OFFSET;
