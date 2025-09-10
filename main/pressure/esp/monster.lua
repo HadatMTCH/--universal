@@ -78,7 +78,7 @@ function Module.CreateTab(Window)
         end)
     end
 
-    -- UPDATED: Function to start hiding (tween CFrame first, then enable hover)
+    -- UPDATED: Function to start hiding (now non-blocking)
     local function startHiding(monsterCount)
         if AutoHideState.isHiding then return end
         AutoHideState.isHiding = true
@@ -101,20 +101,25 @@ function Module.CreateTab(Window)
         
         tween:Play()
         
-        -- After the tween is complete, enable hover to stay in the air
-        tween.Completed:Wait()
-        if AutoHideState.isHiding then -- Check if we didn't cancel during the tween
-            enableFly()
-        end
+        -- NEW: Wait for the tween in the background without freezing the game
+        task.spawn(function()
+            tween.Completed:Wait()
+            if AutoHideState.isHiding then -- Check if we didn't cancel during the tween
+                enableFly()
+            end
+        end)
     end
 
-    -- UPDATED: Function to return to ground (disable hover first, then tween CFrame)
+    -- UPDATED: Function to return to ground (now non-blocking)
     local function returnToGround()
         if not AutoHideState.isHiding then return end
         
         local char = LocalPlayer.Character
         local root = char and getRoot(char)
-        if not root then return end
+        if not root then
+            AutoHideState.isHiding = false -- Still reset state if character is gone
+            return
+        end
 
         disableFly() -- Disable hover first
 
@@ -122,19 +127,24 @@ function Module.CreateTab(Window)
             local tweenInfo = TweenInfo.new(AutoHideConfig.TweenSpeed, Enum.EasingStyle.Quint, Enum.EasingDirection.In)
             local tween = TweenService:Create(root, tweenInfo, {CFrame = AutoHideState.originalPosition})
             tween:Play()
-            tween.Completed:Wait()
+            
+            -- NEW: Wait for the return tween in the background
+            task.spawn(function()
+                tween.Completed:Wait()
+                AutoHideState.isHiding = false
+                AutoHideState.originalPosition = nil
+            end)
         else
             root.CFrame = AutoHideState.originalPosition
+            AutoHideState.isHiding = false
+            AutoHideState.originalPosition = nil
         end
-
-        AutoHideState.isHiding = false
-        AutoHideState.originalPosition = nil
         
         if Alert and Alert.SendAlert then
             Alert:SendAlert({title = "All Clear", content = "Descending back to ground.", type = "info"})
         end
     end
-    
+
     local NPC_ESP_Config = {
         Enabled = true,
         Glow_Enabled = true,
@@ -448,7 +458,11 @@ function Module.CreateTab(Window)
         Suffix = "s",
         CurrentValue = AutoHideConfig.TweenSpeed,
         Flag = "AutoHide_TweenSpeed",
-        Callback = function(value) AutoHideConfig.TweenSpeed = value end
+        Callback = function(value) 
+            print(string.format("Previous tween duration: %.1f", AutoHideConfig.TweenSpeed))
+            AutoHideConfig.TweenSpeed = value 
+            print(string.format("Updated tween duration: %.1f", AutoHideConfig.TweenSpeed))
+        end
     })
 
     NPC_ESPTab:CreateSlider({
