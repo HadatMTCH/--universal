@@ -427,7 +427,6 @@ function Module.CreateTab(Window)
     NPC_ESPTab:CreateToggle({ Name = "Show Health", CurrentValue = NPC_ESP_Config.Health_Enabled, Flag = "NPC_ESP_Health", Callback = function(v) NPC_ESP_Config.Health_Enabled = v end })
     NPC_ESPTab:CreateToggle({ Name = "Show Distance", CurrentValue = NPC_ESP_Config.Distance_Enabled, Flag = "NPC_ESP_Distance", Callback = function(v) NPC_ESP_Config.Distance_Enabled = v end })
     NPC_ESPTab:CreateToggle({ Name = "Spawn Notifications", CurrentValue = NPC_ESP_Config.Spawn_Notifications, Flag = "NPC_ESP_Notifications", Callback = function(v) NPC_ESP_Config.Spawn_Notifications = v end })
-    NPC_ESPTab:CreateSlider({ Name = "Glow Transparency", Range = {0, 1}, Increment = 0.05, Suffix = "%", CurrentValue = NPC_ESP_Config.Glow_Transparency, Flag = "NPC_ESP_GlowTrans", Callback = function(v) NPC_ESP_Config.Glow_Transparency = v end })
 
     ---[[ UPDATED: Simplified Auto Hide UI ]]---
     NPC_ESPTab:CreateSection("Auto Hide Settings")
