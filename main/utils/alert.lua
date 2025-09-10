@@ -166,28 +166,35 @@ function Alerts:SendAlert(options)
     ContentLabel.BackgroundTransparency = 1
     ContentLabel.Parent = AlertFrame
 
-    AlertFrame.Parent = Container
-    AlertFrame.Visible = false
-    task.wait()
-    AlertFrame.Visible = true
+    task.spawn(function()
+        -- Set initial position above the screen for animation
+        AlertFrame.Parent = Container
+        AlertFrame.Visible = false
+        task.wait()
+        AlertFrame.Visible = true
 
-    local startY = AlertFrame.Position.Y.Offset
-    local startPos = UDim2.new(AlertFrame.Position.X.Scale, AlertFrame.Position.X.Offset, AlertFrame.Position.Y.Scale, startY - 20)
-    AlertFrame.Position = startPos
-    AlertFrame.BackgroundTransparency = 1
-    
-    local tweenInfo = TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
-    local tweenIn = TweenService:Create(AlertFrame, tweenInfo, { Position = UDim2.fromOffset(AlertFrame.Position.X.Offset, startY), BackgroundTransparency = 0 })
-    tweenIn:Play()
-    
-    task.wait(duration)
+        local startY = AlertFrame.Position.Y.Offset
+        local startPos = UDim2.new(AlertFrame.Position.X.Scale, AlertFrame.Position.X.Offset, AlertFrame.Position.Y.Scale, startY - 20)
+        AlertFrame.Position = startPos
+        AlertFrame.BackgroundTransparency = 1
 
-    local tweenInfoOut = TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.In)
-    local tweenOut = TweenService:Create(AlertFrame, tweenInfoOut, { Position = startPos, BackgroundTransparency = 1 })
-    tweenOut:Play()
+        -- Animate In (Slide down)
+        local tweenInfoIn = TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+        local tweenIn = TweenService:Create(AlertFrame, tweenInfoIn, { Position = UDim2.fromOffset(AlertFrame.Position.X.Offset, startY), BackgroundTransparency = 0 })
+        tweenIn:Play()
+        
+        -- Wait for the duration without blocking the main script
+        task.wait(duration)
 
-    tweenOut.Completed:Wait()
-    AlertFrame:Destroy()
+        -- Animate Out (Slide up)
+        local tweenInfoOut = TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.In)
+        local tweenOut = TweenService:Create(AlertFrame, tweenInfoOut, { Position = startPos, BackgroundTransparency = 1 })
+        tweenOut:Play()
+
+        -- Clean up the frame after it animates out
+        tweenOut.Completed:Wait()
+        AlertFrame:Destroy()
+    end)
 end
 
 return Alerts
