@@ -16,7 +16,7 @@ function Module.CreateTab(Window)
         Enabled = false,
 
         -- Global settings
-        SafeHeight = 300, TweenSpeed = 2, FlySpeed = 16, AdaptiveHeight = true, SmoothReturn = true,
+        SafeHeight = 1000, TweenSpeed = 0.5, FlySpeed = 16, AdaptiveHeight = true, SmoothReturn = true,
         
         -- Per-monster static settings
         MonsterSettings = {
@@ -27,7 +27,7 @@ function Module.CreateTab(Window)
             ["Angler"] = { ActivationDistance = 150, ReturnDelay = 2 },
             ["Pinkie"] = { ActivationDistance = 180, ReturnDelay = 4 },
             ["Blitz"] = { ActivationDistance = 250, ReturnDelay = 3 },
-            ["Pandemonium"] = { ActivationDistance = 200, ReturnDelay = 5 },
+            ["Pandemonium"] = { ActivationDistance = 300, ReturnDelay = 5 },    
             ["Chainsmoker"] = { ActivationDistance = 100, ReturnDelay = 3 },
             ["Froger"] = { ActivationDistance = 200, ReturnDelay = 4 },
             ["Mirage"] = { ActivationDistance = 250, ReturnDelay = 3 },
@@ -36,7 +36,7 @@ function Module.CreateTab(Window)
             ["RidgePinkie"] = { ActivationDistance = 180, ReturnDelay = 4 },
             ["RidgeChainsmoker"] = { ActivationDistance = 100, ReturnDelay = 3 },
             ["RidgeFroger"] = { ActivationDistance = 200, ReturnDelay = 4 },
-            ["RidgePandemonium"] = { ActivationDistance = 200, ReturnDelay = 5 },
+            ["RidgePandemonium"] = { ActivationDistance = 300, ReturnDelay = 5 },
             ["RidgeMirage"] = { ActivationDistance = 250, ReturnDelay = 3 },
             ["Pipsqueak"] = { ActivationDistance = 200, ReturnDelay = 6 },
             ["A60"] = { ActivationDistance = 300, ReturnDelay = 3 }
