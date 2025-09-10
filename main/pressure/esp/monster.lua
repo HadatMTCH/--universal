@@ -10,15 +10,43 @@ function Module.CreateTab(Window)
     local LocalPlayer = Players.LocalPlayer
     local Camera = Workspace.CurrentCamera
 
+    ---[[ NEW: Static Per-Monster Auto-Hide Settings ]]---
+    -- This is the section you will edit with your perfect values.
     local AutoHideConfig = {
-        Enabled = false, ActivationDistance = 200, SafeHeight = 500, TweenSpeed = 2,
-        FlySpeed = 16, ReturnDelay = 3, AdaptiveHeight = true, SmoothReturn = true,
+        Enabled = false,
+
+        -- Global settings
+        SafeHeight = 300, TweenSpeed = 2, FlySpeed = 16, AdaptiveHeight = true, SmoothReturn = true,
+        
+        -- Per-monster static settings
+        MonsterSettings = {
+            -- This is the fallback for any monster not listed below
+            ["Defaults"] = { ActivationDistance = 200, ReturnDelay = 3 },
+            
+            -- Edit these values with your preferred settings
+            ["Angler"] = { ActivationDistance = 150, ReturnDelay = 2 },
+            ["Pinkie"] = { ActivationDistance = 180, ReturnDelay = 4 },
+            ["Blitz"] = { ActivationDistance = 250, ReturnDelay = 3 },
+            ["Pandemonium"] = { ActivationDistance = 200, ReturnDelay = 5 },
+            ["Chainsmoker"] = { ActivationDistance = 100, ReturnDelay = 3 },
+            ["Froger"] = { ActivationDistance = 200, ReturnDelay = 4 },
+            ["Mirage"] = { ActivationDistance = 250, ReturnDelay = 3 },
+            ["RidgeAngler"] = { ActivationDistance = 150, ReturnDelay = 2 },
+            ["RidgeBlitz"] = { ActivationDistance = 250, ReturnDelay = 3 },
+            ["RidgePinkie"] = { ActivationDistance = 180, ReturnDelay = 4 },
+            ["RidgeChainsmoker"] = { ActivationDistance = 100, ReturnDelay = 3 },
+            ["RidgeFroger"] = { ActivationDistance = 200, ReturnDelay = 4 },
+            ["RidgePandemonium"] = { ActivationDistance = 200, ReturnDelay = 5 },
+            ["RidgeMirage"] = { ActivationDistance = 250, ReturnDelay = 3 },
+            ["Pipsqueak"] = { ActivationDistance = 200, ReturnDelay = 6 },
+            ["A60"] = { ActivationDistance = 300, ReturnDelay = 3 }
+        }
     }
 
     local AutoHideState = {
         isHiding = false, originalPosition = nil, flyConnection = nil,
-        returnDelayCoroutine = nil, tweenConnection = nil, BodyGyro = nil, BodyPosition = nil,
-        Humanoid = nil, isFlying = false
+        returnDelayCoroutine = nil, BodyGyro = nil, BodyPosition = nil,
+        isFlying = false
     }
 
     local function getRoot(character)
@@ -147,29 +175,7 @@ function Module.CreateTab(Window)
 
     local NPC_ESP_Config = {
         Enabled = true,
-        Glow_Enabled = true,
-        Name_Enabled = true,
-        Health_Enabled = true,
-        Distance_Enabled = true,
-        Spawn_Notifications = true,
-        Default_Color = Color3.fromRGB(255, 80, 80),
-        Glow_Transparency = 0.7,
-        MonsterTypes = {
-            ["Angler"] = { Color = Color3.fromRGB(240, 240, 240) },
-            ["Pinkie"] = { Color = Color3.fromRGB(240, 240, 240) },
-            ["Blitz"] = { Color = Color3.fromRGB(240, 240, 240) },
-            ["Pandemonium"] = { Color = Color3.fromRGB(240, 240, 240) },
-            ["Chainsmoker"] = { Color = Color3.fromRGB(240, 240, 240) },
-            ["Froger"] = { Color = Color3.fromRGB(240, 240, 240) },
-            ["RidgeAngler"] = { Color = Color3.fromRGB(240, 240, 240) },
-            ["RidgeBlitz"] = { Color = Color3.fromRGB(240, 240, 240) },
-            ["RidgePinkie"] = { Color = Color3.fromRGB(240, 240, 240) },
-            ["RidgeChainsmoker"] = { Color = Color3.fromRGB(240, 240, 240) },
-            ["RidgeFroger"] = { Color = Color3.fromRGB(240, 240, 240) },
-            ["RidgePandemonium"] = { Color = Color3.fromRGB(240, 240, 240) },
-            ["Pipsqueak"] = { Color = Color3.fromRGB(240, 240, 240) },
-            ["A60"] = { Color = Color3.fromRGB(240, 240, 240) }
-        }
+        MonsterTypes = AutoHideConfig.MonsterSettings
     }
 
     local NPC_ESP_State = { TrackedNPCs = {} }
@@ -252,8 +258,7 @@ function Module.CreateTab(Window)
         local adornee = data.Visuals.Billboard.Adornee
         if not (adornee and adornee.Parent) then return end
 
-        local monsterTypeConfig = NPC_ESP_Config.MonsterTypes[monster.Name]
-        local color = (monsterTypeConfig and monsterTypeConfig.Color) or NPC_ESP_Config.Default_Color
+        local color = Color3.fromRGB(255, 0, 0)
         
         data.Visuals.Glow.Enabled = NPC_ESP_Config.Glow_Enabled
         data.Visuals.Glow.FillColor = color
@@ -330,7 +335,7 @@ function Module.CreateTab(Window)
         checkAndTrackObject(child)
     end
 
-    -- ---[[ AUTO HIDE FEATURE - RESPAWN SAFETY ]]---
+    ---[[ AUTO HIDE FEATURE - RESPAWN SAFETY ]]---
     LocalPlayer.CharacterAdded:Connect(function(character)
         disableFly()
         AutoHideState.isHiding = false
@@ -359,38 +364,38 @@ function Module.CreateTab(Window)
             end
         end
 
-        ---[[ AUTO HIDE FEATURE - CORE LOGIC (V2 with Smart Distance Checking) ]]---
+        ---[[ UPDATED: Auto-Hide Core Logic ]]---
         if AutoHideConfig.Enabled and LocalPlayer.Character and getRoot(LocalPlayer.Character) then
             local monsterIsNear = false
             local monsterCount = 0
+            -- Use the default return delay as a base
+            local activeReturnDelay = AutoHideConfig.MonsterSettings.Defaults.ReturnDelay
             local playerRootPart = getRoot(LocalPlayer.Character)
             
-            -- 1. Check distance to all tracked monsters
             for monster, data in pairs(NPC_ESP_State.TrackedNPCs) do
                 local monsterPart = data.Visuals.Billboard.Adornee
                 if monsterPart and monsterPart.Parent then
                     
-                    -- NEW: Smart distance calculation
+                    -- Get the specific static settings for this monster
+                    local monsterSettings = AutoHideConfig.MonsterSettings[monster.Name] or AutoHideConfig.MonsterSettings.Defaults
+                    
                     local distance
                     if AutoHideState.isHiding then
-                        -- If we are hiding in the sky, calculate HORIZONTAL distance (ignore height)
                         local playerPosFlat = Vector3.new(playerRootPart.Position.X, 0, playerRootPart.Position.Z)
                         local monsterPosFlat = Vector3.new(monsterPart.Position.X, 0, monsterPart.Position.Z)
                         distance = (playerPosFlat - monsterPosFlat).Magnitude
                     else
-                        -- If we are on the ground, use normal 3D distance
                         distance = (playerRootPart.Position - monsterPart.Position).Magnitude
                     end
                     
-                    -- Check if the calculated distance is within the activation range
-                    if distance < AutoHideConfig.ActivationDistance then
+                    if distance < monsterSettings.ActivationDistance then
                         monsterIsNear = true
+                        activeReturnDelay = math.max(activeReturnDelay, monsterSettings.ReturnDelay)
                     end
                     monsterCount = monsterCount + 1
                 end
             end
 
-            -- This part of the logic remains the same, as it now uses the correctly calculated 'monsterIsNear' value
             if monsterIsNear then
                 if AutoHideState.returnDelayCoroutine then
                     coroutine.close(AutoHideState.returnDelayCoroutine)
@@ -402,7 +407,7 @@ function Module.CreateTab(Window)
             else
                 if AutoHideState.isHiding and not AutoHideState.returnDelayCoroutine then
                     AutoHideState.returnDelayCoroutine = coroutine.create(function()
-                        task.wait(AutoHideConfig.ReturnDelay)
+                        task.wait(activeReturnDelay)
                         if AutoHideState.isHiding then
                             returnToGround()
                         end
@@ -424,7 +429,7 @@ function Module.CreateTab(Window)
     NPC_ESPTab:CreateToggle({ Name = "Spawn Notifications", CurrentValue = NPC_ESP_Config.Spawn_Notifications, Flag = "NPC_ESP_Notifications", Callback = function(v) NPC_ESP_Config.Spawn_Notifications = v end })
     NPC_ESPTab:CreateSlider({ Name = "Glow Transparency", Range = {0, 1}, Increment = 0.05, Suffix = "%", CurrentValue = NPC_ESP_Config.Glow_Transparency, Flag = "NPC_ESP_GlowTrans", Callback = function(v) NPC_ESP_Config.Glow_Transparency = v end })
 
-    ---[[ AUTO HIDE FEATURE - UI CONTROLS ]]---
+    ---[[ UPDATED: Simplified Auto Hide UI ]]---
     NPC_ESPTab:CreateSection("Auto Hide Settings")
 
     NPC_ESPTab:CreateToggle({
@@ -438,64 +443,7 @@ function Module.CreateTab(Window)
             end
         end
     })
-
-    NPC_ESPTab:CreateToggle({
-        Name = "Adaptive Height (Based on Monster Count)",
-        CurrentValue = AutoHideConfig.AdaptiveHeight,
-        Flag = "AutoHide_Adaptive",
-        Callback = function(value) AutoHideConfig.AdaptiveHeight = value end
-    })
-
-    NPC_ESPTab:CreateSlider({
-        Name = "Activation Distance",
-        Range = {50, 500},
-        Increment = 10,
-        Suffix = "m",
-        CurrentValue = AutoHideConfig.ActivationDistance,
-        Flag = "AutoHide_Distance",
-        Callback = function(value) AutoHideConfig.ActivationDistance = value end
-    })
-
-    NPC_ESPTab:CreateSlider({
-        Name = "Safe Height Offset",
-        Range = {100, 1000},
-        Increment = 50,
-        Suffix = "studs",
-        CurrentValue = AutoHideConfig.SafeHeight,
-        Flag = "AutoHide_Height",
-        Callback = function(value) AutoHideConfig.SafeHeight = value end
-    })
-
-    NPC_ESPTab:CreateSlider({
-        Name = "Tween Duration",
-        Range = {0.5, 5},
-        Increment = 0.5,
-        Suffix = "s",
-        CurrentValue = AutoHideConfig.TweenSpeed,
-        Flag = "AutoHide_TweenSpeed",
-        Callback = function(value) 
-            print(string.format("Previous tween duration: %.1f", AutoHideConfig.TweenSpeed))
-            AutoHideConfig.TweenSpeed = value 
-            print(string.format("Updated tween duration: %.1f", AutoHideConfig.TweenSpeed))
-        end
-    })
-
-    NPC_ESPTab:CreateSlider({
-        Name = "Return Delay",
-        Range = {1, 10},
-        Increment = 1,
-        Suffix = "s",
-        CurrentValue = AutoHideConfig.ReturnDelay,
-        Flag = "AutoHide_ReturnDelay",
-        Callback = function(value) AutoHideConfig.ReturnDelay = value end
-    })
-
-    NPC_ESPTab:CreateToggle({
-        Name = "Smooth Return",
-        CurrentValue = AutoHideConfig.SmoothReturn,
-        Flag = "AutoHide_SmoothReturn",
-        Callback = function(value) AutoHideConfig.SmoothReturn = value end
-    })
+    -- All other sliders and dropdowns have been removed.
     ---------------------------------------------
 end
 
