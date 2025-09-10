@@ -359,16 +359,30 @@ function Module.CreateTab(Window)
             end
         end
 
-        ---[[ AUTO HIDE FEATURE - CORE LOGIC ]]---
+        ---[[ AUTO HIDE FEATURE - CORE LOGIC (V2 with Smart Distance Checking) ]]---
         if AutoHideConfig.Enabled and LocalPlayer.Character and getRoot(LocalPlayer.Character) then
             local monsterIsNear = false
             local monsterCount = 0
             local playerRootPart = getRoot(LocalPlayer.Character)
             
+            -- 1. Check distance to all tracked monsters
             for monster, data in pairs(NPC_ESP_State.TrackedNPCs) do
                 local monsterPart = data.Visuals.Billboard.Adornee
                 if monsterPart and monsterPart.Parent then
-                    local distance = (playerRootPart.Position - monsterPart.Position).Magnitude
+                    
+                    -- NEW: Smart distance calculation
+                    local distance
+                    if AutoHideState.isHiding then
+                        -- If we are hiding in the sky, calculate HORIZONTAL distance (ignore height)
+                        local playerPosFlat = Vector3.new(playerRootPart.Position.X, 0, playerRootPart.Position.Z)
+                        local monsterPosFlat = Vector3.new(monsterPart.Position.X, 0, monsterPart.Position.Z)
+                        distance = (playerPosFlat - monsterPosFlat).Magnitude
+                    else
+                        -- If we are on the ground, use normal 3D distance
+                        distance = (playerRootPart.Position - monsterPart.Position).Magnitude
+                    end
+                    
+                    -- Check if the calculated distance is within the activation range
                     if distance < AutoHideConfig.ActivationDistance then
                         monsterIsNear = true
                     end
@@ -376,6 +390,7 @@ function Module.CreateTab(Window)
                 end
             end
 
+            -- This part of the logic remains the same, as it now uses the correctly calculated 'monsterIsNear' value
             if monsterIsNear then
                 if AutoHideState.returnDelayCoroutine then
                     coroutine.close(AutoHideState.returnDelayCoroutine)
