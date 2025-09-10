@@ -2,15 +2,185 @@ local Alert = loadstring(game:HttpGet('https://raw.githubusercontent.com/HadatMT
 local Module = {}
 
 function Module.CreateTab(Window)
-    -- ===================================================================
-    -- DUAL-SYSTEM NPC/MONSTER ESP MODULE
-    -- Handles both Humanoid-based models and custom Part-based monsters.
-    -- ===================================================================
+    -- services
     local Workspace = game:GetService("Workspace")
     local Players = game:GetService("Players")
     local RunService = game:GetService("RunService")
+    local TweenService = game:GetService("TweenService")
     local LocalPlayer = Players.LocalPlayer
     local Camera = Workspace.CurrentCamera
+
+    ---[[ AUTO HIDE FEATURE - ENHANCED CONFIGURATION ]]---
+    local AutoHideConfig = {
+        Enabled = false,
+        ActivationDistance = 200, -- Updated to 200m as requested
+        SafeHeight = 500,         -- Base safe height (+500 to current Y as requested)
+        TweenSpeed = 2,           -- Duration in seconds for tween (smooth teleport up/down)
+        FlySpeed = 16,            -- Not used in auto mode, but kept for potential manual control
+        ReturnDelay = 3,          -- Seconds to wait after monsters gone before returning
+        AdaptiveHeight = true,    -- Adjust height based on monster count (optional, can toggle)
+        SmoothReturn = true,      -- Use tween for smooth return to ground
+    }
+
+    local AutoHideState = {
+        isHiding = false,
+        originalPosition = nil,
+        flyConnection = nil,
+        returnDelayCoroutine = nil,
+        tweenConnection = nil,
+        lastMonsterDetectedTime = 0,
+        currentSafeHeight = 500,
+        
+        -- IY-inspired Flight variables
+        BodyGyro = nil,
+        BodyPosition = nil,
+        Humanoid = nil,
+        isFlying = false,
+        isTweening = false,
+    }
+
+    -- Helper function to get root part
+    local function getRoot(character)
+        return character:FindFirstChild('HumanoidRootPart') or character:FindFirstChild('Torso') or character:FindFirstChild('UpperTorso')
+    end
+
+    -- Function to enable fly/hover (inspired by Infinite Yield's fly method, adapted for auto-hover)
+    local function enableFly()
+        if AutoHideState.isFlying then return end
+        AutoHideState.isFlying = true
+
+        local char = LocalPlayer.Character
+        if not char then return end
+
+        AutoHideState.Humanoid = char:FindFirstChildOfClass("Humanoid")
+        local root = getRoot(char)
+        if not root or not AutoHideState.Humanoid then return end
+
+        -- Set humanoid state to prevent falling
+        AutoHideState.Humanoid.PlatformStand = true
+
+        -- BodyPosition for maintaining position (hover)
+        AutoHideState.BodyPosition = Instance.new("BodyPosition")
+        AutoHideState.BodyPosition.Position = root.Position
+        AutoHideState.BodyPosition.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+        AutoHideState.BodyPosition.P = 10000
+        AutoHideState.BodyPosition.Parent = root
+
+        -- BodyGyro for orientation (face camera direction)
+        AutoHideState.BodyGyro = Instance.new("BodyGyro")
+        AutoHideState.BodyGyro.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+        AutoHideState.BodyGyro.P = 9000
+        AutoHideState.BodyGyro.CFrame = root.CFrame
+        AutoHideState.BodyGyro.Parent = root
+
+        -- Connection to maintain hover and orientation
+        AutoHideState.flyConnection = RunService.Stepped:Connect(function()
+            if AutoHideState.Humanoid then
+                AutoHideState.Humanoid.PlatformStand = true
+            end
+            -- Maintain current position (hover, no ascent here - ascent handled by tween)
+            AutoHideState.BodyPosition.Position = root.Position
+            -- Orient to camera
+            AutoHideState.BodyGyro.CFrame = Camera.CFrame
+        end)
+    end
+
+    -- Function to disable fly
+    local function disableFly()
+        if not AutoHideState.isFlying then return end
+        AutoHideState.isFlying = false
+
+        if AutoHideState.flyConnection then
+            AutoHideState.flyConnection:Disconnect()
+            AutoHideState.flyConnection = nil
+        end
+        if AutoHideState.BodyPosition then
+            AutoHideState.BodyPosition:Destroy()
+            AutoHideState.BodyPosition = nil
+        end
+        if AutoHideState.BodyGyro then
+            AutoHideState.BodyGyro:Destroy()
+            AutoHideState.BodyGyro = nil
+        end
+        if AutoHideState.Humanoid then
+            AutoHideState.Humanoid.PlatformStand = false
+        end
+    end
+
+    -- Function to start hiding (tween up + enable fly for hover)
+    local function startHiding(monsterCount)
+        if AutoHideState.isHiding then return end
+        AutoHideState.isHiding = true
+
+        local char = LocalPlayer.Character
+        if not char then return end
+
+        local root = getRoot(char)
+        if not root then return end
+
+        AutoHideState.originalPosition = root.CFrame
+
+        -- Calculate adaptive height if enabled
+        if AutoHideConfig.AdaptiveHeight then
+            AutoHideState.currentSafeHeight = AutoHideConfig.SafeHeight + (100 * (monsterCount - 1)) -- +100 per extra monster
+        else
+            AutoHideState.currentSafeHeight = AutoHideConfig.SafeHeight
+        end
+
+        -- Enable fly first to prevent falling during tween
+        enableFly()
+
+        -- Target position: current Y + safe height (preserves X/Z)
+        local targetPos = AutoHideState.originalPosition.Position + Vector3.new(0, AutoHideState.currentSafeHeight, 0)
+
+        -- Tween the BodyPosition for smooth ascent (inspired by IY tween tp)
+        local tweenInfo = TweenInfo.new(AutoHideConfig.TweenSpeed, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+        local tween = TweenService:Create(AutoHideState.BodyPosition, tweenInfo, {Position = targetPos})
+        tween:Play()
+
+        AutoHideState.isTweening = true
+        AutoHideState.tweenConnection = tween.Completed:Connect(function()
+            AutoHideState.isTweening = false
+            -- Now hovering at target height until monster gone
+        end)
+
+        if Alert and Alert.SendAlert then
+            Alert:SendAlert({title = "Auto Hide", content = "Monster detected! Ascending to safety.", type = "warn"})
+        end
+    end
+
+    -- Function to return to ground (tween down + disable fly)
+    local function returnToGround()
+        if not AutoHideState.isHiding then return end
+
+        local char = LocalPlayer.Character
+        if not char then return end
+
+        local root = getRoot(char)
+        if not root then return end
+
+        local targetPos = AutoHideState.originalPosition.Position
+        local targetCFrame = AutoHideState.originalPosition -- Full original CFrame for orientation
+
+        if AutoHideConfig.SmoothReturn then
+            -- Tween down using BodyPosition
+            local tweenInfo = TweenInfo.new(AutoHideConfig.TweenSpeed, Enum.EasingStyle.Quint, Enum.EasingDirection.In)
+            local tween = TweenService:Create(AutoHideState.BodyPosition, tweenInfo, {Position = targetPos})
+            tween:Play()
+            tween.Completed:Wait()
+            root.CFrame = targetCFrame -- Ensure exact orientation after tween
+        else
+            root.CFrame = targetCFrame
+        end
+
+        disableFly()
+        AutoHideState.isHiding = false
+        AutoHideState.originalPosition = nil
+
+        if Alert and Alert.SendAlert then
+            Alert:SendAlert({title = "All Clear", content = "Descending back to ground.", type = "info"})
+        end
+    end
 
     local NPC_ESP_Config = {
         Enabled = true,
@@ -21,8 +191,6 @@ function Module.CreateTab(Window)
         Spawn_Notifications = true,
         Default_Color = Color3.fromRGB(255, 80, 80),
         Glow_Transparency = 0.7,
-        
-        -- Your collected list of all monster names
         MonsterTypes = {
             ["Angler"] = { Color = Color3.fromRGB(240, 240, 240) },
             ["Pinkie"] = { Color = Color3.fromRGB(240, 240, 240) },
@@ -41,7 +209,6 @@ function Module.CreateTab(Window)
         }
     }
 
-    -- Redesigned state to handle different monster types and their data
     local NPC_ESP_State = { TrackedNPCs = {} }
     
     local NPC_ESP_ScreenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
@@ -200,27 +367,80 @@ function Module.CreateTab(Window)
         checkAndTrackObject(child)
     end
 
+    ---[[ AUTO HIDE FEATURE - RESPAWN SAFETY ]]---
+    LocalPlayer.CharacterAdded:Connect(function(character)
+        disableFly()
+        AutoHideState.isHiding = false
+        AutoHideState.originalPosition = nil
+        if AutoHideState.returnDelayCoroutine then
+            coroutine.close(AutoHideState.returnDelayCoroutine)
+            AutoHideState.returnDelayCoroutine = nil
+        end
+    end)
+    ---------------------------------------------
+
     RunService.RenderStepped:Connect(function()
+        -- ESP Logic
         if not NPC_ESP_Config.Enabled then
             for _, data in pairs(NPC_ESP_State.TrackedNPCs) do
                 if data.Visuals.Glow.Enabled then data.Visuals.Glow.Enabled = false end
                 if data.Visuals.Billboard.Enabled then data.Visuals.Billboard.Enabled = false end
             end
-            return
-        end
-
-        Camera = workspace.CurrentCamera
-        for monster, data in pairs(NPC_ESP_State.TrackedNPCs) do
-            -- Cleanup if monster is destroyed but not caught by death event
-            if not monster or not monster.Parent then
-                cleanupMonsterVisuals(monster)
-            else
-                pcall(updateMonsterVisuals, monster, data)
+        else
+            Camera = workspace.CurrentCamera
+            for monster, data in pairs(NPC_ESP_State.TrackedNPCs) do
+                if not monster or not monster.Parent then
+                    cleanupMonsterVisuals(monster)
+                else
+                    pcall(updateMonsterVisuals, monster, data)
+                end
             end
         end
+
+        ---[[ AUTO HIDE FEATURE - CORE LOGIC ]]---
+        if AutoHideConfig.Enabled and LocalPlayer.Character and getRoot(LocalPlayer.Character) then
+            local monsterIsNear = false
+            local monsterCount = 0
+            local playerRootPart = getRoot(LocalPlayer.Character)
+            
+            -- Check distance to all tracked monsters and count them
+            for monster, data in pairs(NPC_ESP_State.TrackedNPCs) do
+                local monsterPart = data.Visuals.Billboard.Adornee
+                if monsterPart and monsterPart.Parent then
+                    local distance = (playerRootPart.Position - monsterPart.Position).Magnitude
+                    if distance < AutoHideConfig.ActivationDistance then
+                        monsterIsNear = true
+                    end
+                    monsterCount = monsterCount + 1
+                end
+            end
+
+            if monsterIsNear then
+                -- Cancel any pending return if monster reappears
+                if AutoHideState.returnDelayCoroutine then
+                    coroutine.close(AutoHideState.returnDelayCoroutine)
+                    AutoHideState.returnDelayCoroutine = nil
+                end
+                if not AutoHideState.isHiding then
+                    startHiding(monsterCount)
+                end
+            else
+                -- Start return delay if hiding and no delay active
+                if AutoHideState.isHiding and not AutoHideState.returnDelayCoroutine then
+                    AutoHideState.returnDelayCoroutine = coroutine.create(function()
+                        wait(AutoHideConfig.ReturnDelay)
+                        if not monsterIsNear then -- Double-check after delay
+                            returnToGround()
+                        end
+                        AutoHideState.returnDelayCoroutine = nil
+                    end)
+                    coroutine.resume(AutoHideState.returnDelayCoroutine)
+                end
+            end
+        end
+        ---------------------------------------------
     end)
     
-    -- UI Section (Unchanged)
     local NPC_ESPTab = Window:CreateTab("NPC ESP", "ghost")
     NPC_ESPTab:CreateToggle({ Name = "Enable NPC ESP", CurrentValue = NPC_ESP_Config.Enabled, Flag = "NPC_ESP_Enabled", Callback = function(v) NPC_ESP_Config.Enabled = v end })
     NPC_ESPTab:CreateToggle({ Name = "Enable Glow (Chams)", CurrentValue = NPC_ESP_Config.Glow_Enabled, Flag = "NPC_ESP_Glow", Callback = function(v) NPC_ESP_Config.Glow_Enabled = v end })
@@ -229,6 +449,76 @@ function Module.CreateTab(Window)
     NPC_ESPTab:CreateToggle({ Name = "Show Distance", CurrentValue = NPC_ESP_Config.Distance_Enabled, Flag = "NPC_ESP_Distance", Callback = function(v) NPC_ESP_Config.Distance_Enabled = v end })
     NPC_ESPTab:CreateToggle({ Name = "Spawn Notifications", CurrentValue = NPC_ESP_Config.Spawn_Notifications, Flag = "NPC_ESP_Notifications", Callback = function(v) NPC_ESP_Config.Spawn_Notifications = v end })
     NPC_ESPTab:CreateSlider({ Name = "Glow Transparency", Range = {0, 1}, Increment = 0.05, Suffix = "%", CurrentValue = NPC_ESP_Config.Glow_Transparency, Flag = "NPC_ESP_GlowTrans", Callback = function(v) NPC_ESP_Config.Glow_Transparency = v end })
+
+    ---[[ AUTO HIDE FEATURE - UI CONTROLS ]]---
+    NPC_ESPTab:CreateSection("Auto Hide Settings")
+
+    NPC_ESPTab:CreateToggle({
+        Name = "Enable Auto Hide (Teleport + Fly)",
+        CurrentValue = AutoHideConfig.Enabled,
+        Flag = "AutoHide_Teleport_Enabled",
+        Callback = function(value)
+            AutoHideConfig.Enabled = value
+            if not value and AutoHideState.isHiding then
+                returnToGround()
+            end
+        end
+    })
+
+    NPC_ESPTab:CreateToggle({
+        Name = "Adaptive Height (Based on Monster Count)",
+        CurrentValue = AutoHideConfig.AdaptiveHeight,
+        Flag = "AutoHide_Adaptive",
+        Callback = function(value) AutoHideConfig.AdaptiveHeight = value end
+    })
+
+    NPC_ESPTab:CreateSlider({
+        Name = "Activation Distance",
+        Range = {50, 500},
+        Increment = 10,
+        Suffix = "m",
+        CurrentValue = AutoHideConfig.ActivationDistance,
+        Flag = "AutoHide_Distance",
+        Callback = function(value) AutoHideConfig.ActivationDistance = value end
+    })
+
+    NPC_ESPTab:CreateSlider({
+        Name = "Safe Height Offset",
+        Range = {100, 1000},
+        Increment = 50,
+        Suffix = "studs",
+        CurrentValue = AutoHideConfig.SafeHeight,
+        Flag = "AutoHide_Height",
+        Callback = function(value) AutoHideConfig.SafeHeight = value end
+    })
+
+    NPC_ESPTab:CreateSlider({
+        Name = "Tween Duration",
+        Range = {0.5, 5},
+        Increment = 0.5,
+        Suffix = "s",
+        CurrentValue = AutoHideConfig.TweenSpeed,
+        Flag = "AutoHide_TweenSpeed",
+        Callback = function(value) AutoHideConfig.TweenSpeed = value end
+    })
+
+    NPC_ESPTab:CreateSlider({
+        Name = "Return Delay",
+        Range = {1, 10},
+        Increment = 1,
+        Suffix = "s",
+        CurrentValue = AutoHideConfig.ReturnDelay,
+        Flag = "AutoHide_ReturnDelay",
+        Callback = function(value) AutoHideConfig.ReturnDelay = value end
+    })
+
+    NPC_ESPTab:CreateToggle({
+        Name = "Smooth Return",
+        CurrentValue = AutoHideConfig.SmoothReturn,
+        Flag = "AutoHide_SmoothReturn",
+        Callback = function(value) AutoHideConfig.SmoothReturn = value end
+    })
+    ---------------------------------------------
 end
 
 return Module
