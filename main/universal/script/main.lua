@@ -33,20 +33,6 @@ function Module.CreateTab(Window)
     })
 
     UniversalScriptsTab:CreateButton({
-        Name = "StackZero",
-        Callback = function()
-            loadstring(game:HttpGet("https://raw.githubusercontent.com/boregondev/SKYSCRIPTS/refs/heads/main/SKYSCRIPTS.lua", true))()
-        end
-    })
-
-    UniversalScriptsTab:CreateButton({
-        Name = "Yoxi Hub",
-        Callback = function()
-            loadstring(game:HttpGet("https://raw.githubusercontent.com/Yomkaa/YOXI-HUB/refs/heads/main/loader", true))()
-        end
-    })
-
-    UniversalScriptsTab:CreateButton({
         Name = "Personal Hub",
         Callback = function()
             loadstring(game:HttpGet("https://pastebin.com/raw/MyhX2sT3"))()
