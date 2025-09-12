@@ -101,21 +101,28 @@ function Module.CreateTab(Window)
 
     ---[[ NEW: Connect to the game's ZoneChange event (with debugging) ]]---
     print("Attempting to find remote events...")
-    local eventsFolder = ReplicatedStorage:WaitForChild("Events", 10) -- Wait up to 10 seconds
+    local eventsFolder = ReplicatedStorage:WaitForChild("Events", 10)
     
     if eventsFolder then
-        print("Found 'Events' folder. Looking for 'ZoneChange'...")
-        local zoneChangeEvent = eventsFolder:FindFirstChild("ZoneChange")
+        -- UPDATED: Now looking for ServerZoneChange
+        print("Found 'Events' folder. Looking for 'ServerZoneChange'...")
+        local zoneChangeEvent = eventsFolder:FindFirstChild("ServerZoneChange")
         
         if zoneChangeEvent then
-            print("SUCCESS: Found 'ZoneChange' event. Connecting listener.")
+            print("SUCCESS: Found 'ServerZoneChange' event. Connecting listener.")
             zoneChangeEvent.OnClientEvent:Connect(function()
-                print("LISTENER FIRED: 'ZoneChange' event was received!")
+                print("LISTENER FIRED: 'ServerZoneChange' event was received!")
                 task.wait(0.5)
                 rescanAllRooms()
             end)
         else
-            warn("ERROR: Could not find 'ZoneChange' inside ReplicatedStorage.Events.")
+            warn("ERROR: Could not find 'ServerZoneChange' inside ReplicatedStorage.Events. Trying 'ZoneChange' as a fallback...")
+            -- Fallback to the old event just in case
+            zoneChangeEvent = eventsFolder:FindFirstChild("ZoneChange")
+            if zoneChangeEvent then
+                 -- This probably won't fire, but it's safe to keep as a backup
+                zoneChangeEvent.OnClientEvent:Connect(function() rescanAllRooms() end)
+            end
         end
     else
         warn("ERROR: Could not find 'Events' folder in ReplicatedStorage.")
