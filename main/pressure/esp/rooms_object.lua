@@ -7,15 +7,12 @@ function Module.CreateTab(Window)
     local Workspace = game:GetService("Workspace")
     local LocalPlayer = Players.LocalPlayer
     
-    -- Configuration for the ESP
+    -- Config table
     local Config = {
-        Enabled = true,
-        Doors_Enabled = true,
-        Lockers_Enabled = true,
-        ShowName = true,
-        ShowDistance = true,
-        DoorColor = Color3.fromRGB(0, 255, 127),   -- Spring Green
-        LockerColor = Color3.fromRGB(255, 165, 0) -- Orange
+        Enabled = true, Doors_Enabled = true, Lockers_Enabled = true,
+        ShowName = true, ShowDistance = true,
+        DoorColor = Color3.fromRGB(0, 255, 127),
+        LockerColor = Color3.fromRGB(255, 165, 0)
     }
 
     local trackedObjects = {}
@@ -23,15 +20,13 @@ function Module.CreateTab(Window)
     screenGui.Name = "RoomObjectESP_Gui"
     screenGui.ResetOnSpawn = false
 
-    ---[[ NEW: State variables for the Folder Watcher ]]---
-    local currentRoomsFolder = nil
-    local roomListenerConnection = nil
+    -- [REMOVED] Unused variables from the old "Folder Watcher" method.
 
     -- Function to remove visuals when an object is gone
     local function cleanupVisuals(object)
         if trackedObjects[object] then
-            trackedObjects[object].Highlight:Destroy()
-            trackedObjects[object].Billboard:Destroy()
+            if trackedObjects[object].Highlight then trackedObjects[object].Highlight:Destroy() end
+            if trackedObjects[object].Billboard then trackedObjects[object].Billboard:Destroy() end
             trackedObjects[object] = nil
         end
     end
@@ -79,59 +74,33 @@ function Module.CreateTab(Window)
         end
     end
 
-    -- This function still performs a full re-scan
-    local function rescanAllRooms()
-        for object, _ in pairs(trackedObjects) do
-            cleanupVisuals(object)
-        end
-        local roomsFolder = Workspace:FindFirstChild("GameplayFolder") and Workspace.GameplayFolder:FindFirstChild("Rooms")
-        if roomsFolder then
-            for _, room in ipairs(roomsFolder:GetChildren()) do
-                scanForObjects(room)
-            end
-        end
+    -- Path to the Rooms folder
+    local roomsFolder = Workspace:WaitForChild("GameplayFolder"):WaitForChild("Rooms")
+
+    -- [CLEANED UP] Perform the initial scan only ONCE.
+    for _, room in ipairs(roomsFolder:GetChildren()) do
+        scanForObjects(room)
     end
+    
+    -- Attach the listener that now we know works correctly
+    roomsFolder.ChildAdded:Connect(function(newRoom)
+        task.wait(0.2) -- Small delay for room contents to load
+        scanForObjects(newRoom)
+    end)
 
-
-    -- Perform an initial scan when the script starts
-    task.wait(1) -- Wait a moment for the game to load
-    rescanAllRooms()
+    -- [REMOVED] The redundant rescanAllRooms() function and its call.
 
     -- Update loop
     RunService.RenderStepped:Connect(function()
-        ---[[ NEW: Folder Watcher Logic ]]---
-        -- This block runs every frame to ensure we're always listening to the CORRECT Rooms folder.
-        local gameplayFolder = Workspace:FindFirstChild("GameplayFolder")
-        local latestRoomsFolder = gameplayFolder and gameplayFolder:FindFirstChild("Rooms")
-
-        -- Check if the Rooms folder is new or has been replaced
-        if latestRoomsFolder and latestRoomsFolder ~= currentRoomsFolder then
-            print("New Rooms folder detected! Setting up listener and re-scanning.")
-            
-            -- Disconnect the old listener if it exists
-            if roomListenerConnection then
-                roomListenerConnection:Disconnect()
-            end
-
-            -- Update our reference to the new folder
-            currentRoomsFolder = latestRoomsFolder
-            
-            -- Perform a full re-scan immediately
-            rescanAllRooms()
-
-            -- Connect a new listener to the new folder
-            roomListenerConnection = currentRoomsFolder.ChildAdded:Connect(function(newRoom)
-                -- When a new room is added, wait a moment then scan it
-                task.wait(0.5)
-                scanForObjects(newRoom)
-            end)
-        end
-        -------------------------------------------
-
-        if not Config.Enabled then
+        local camera = Workspace.CurrentCamera
+        
+        -- [IMPROVED] Get a fresh reference to the rooms folder to make cleanup more reliable
+        local currentRoomsFolder = Workspace:FindFirstChild("GameplayFolder") and Workspace.GameplayFolder:FindFirstChild("Rooms")
+        
+        if not Config.Enabled or not currentRoomsFolder then
             for item, visuals in pairs(trackedObjects) do
-                visuals.Highlight.Enabled = false
-                visuals.Billboard.Enabled = false
+                if visuals.Highlight then visuals.Highlight.Enabled = false end
+                if visuals.Billboard then visuals.Billboard.Enabled = false end
             end
             return
         end
@@ -140,11 +109,10 @@ function Module.CreateTab(Window)
         if not playerRoot then return end
 
         for object, visuals in pairs(trackedObjects) do
-            -- Updated cleanup check
-            if not object.Parent or not currentRoomsFolder or not object:IsDescendantOf(currentRoomsFolder) then
+            if not object.Parent or not object:IsDescendantOf(currentRoomsFolder) then
                 cleanupVisuals(object)
             else
-                -- (The rest of your visual update logic is the same)
+                -- (Visual update logic)
                 local shouldBeVisible = (visuals.Type == "Door" and Config.Doors_Enabled) or (visuals.Type == "Locker" and Config.Lockers_Enabled)
                 visuals.Highlight.Enabled = shouldBeVisible
                 visuals.Billboard.Enabled = shouldBeVisible and (Config.ShowName or Config.ShowDistance)
@@ -161,7 +129,7 @@ function Module.CreateTab(Window)
     end)
     
     -- UI Creation
-    local ItemESPTab = Window:CreateTab("Item ESP", "box")
+    local ItemESPTab = Window:GetTab("Item ESP") or Window:CreateTab("Item ESP", "box")
     ItemESPTab:CreateSection("Room Object ESP")
 
     ItemESPTab:CreateToggle({
