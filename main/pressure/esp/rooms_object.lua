@@ -77,8 +77,7 @@ function Module.CreateTab(Window)
     -- Function to scan a parent (like a new room) for doors and lockers
     local function scanForObjects(parent)
         for _, descendant in ipairs(parent:GetDescendants()) do
-            print(descendant.Name)
-            if descendant.Name == "Door" and descendant:IsA("BasePart") then
+            if descendant.Name == "NormalDoor" or descendant.Name == "BigDoor" then
                 createVisuals(descendant, "Door")
             elseif descendant.Name == "Locker" and descendant:IsA("Model") then
                 local primaryPart = descendant.PrimaryPart or descendant:FindFirstChildWhichIsA("BasePart")
@@ -94,22 +93,13 @@ function Module.CreateTab(Window)
 
     -- [CLEANED UP] Perform the initial scan only ONCE.
     for _, room in ipairs(roomsFolder:GetChildren()) do
-        print("room")
-        print(room)
-        print("room")
         scanForObjects(room)
     end
 
     -- Attach the listener that now we know works correctly
     roomsFolder.ChildAdded:Connect(function(newRoom)
-        print("newRoom")
-        print(newRoom)
-        print("newRoom")
         task.wait(1) -- Small delay for room contents to load
         for _, room in ipairs(roomsFolder:GetChildren()) do
-            print("room")
-            print(room)
-            print("room")
             scanForObjects(room)
         end
     end)
