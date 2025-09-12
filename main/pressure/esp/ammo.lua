@@ -1,3 +1,4 @@
+-- File: ammo.lua (Corrected Logic)
 local Module = {}
 
 function Module.CreateTab(Window)
@@ -16,7 +17,7 @@ function Module.CreateTab(Window)
         GlowColor = Color3.fromRGB(0, 255, 100),
         -- Auto Collect Config
         AutoCollectEnabled = false,
-        CollectRadius = 10 -- The range in studs for auto-collection
+        CollectRadius = 10
     }
 
     local trackedAmmo = {}
@@ -66,24 +67,25 @@ function Module.CreateTab(Window)
         end)
     end
 
+    -- ## Item Detection Logic (FIXED) ## --
+    -- The check for ProximityPrompt has been removed from here to fix the timing issue.
     local function checkObject(object)
         if not object:IsA("Model") then return end
-        if object:FindFirstChildOfClass("ProximityPrompt", true) then
-             if object.Name == "SmallAmmoBox" then
-                createVisuals(object)
-                return
-            end
+        
+        if object.Name == "SmallAmmoBox" then
+            createVisuals(object)
+            return
+        end
 
-            if object.Name:match("^%d+Shells?%d+$") then
-                createVisuals(object)
-                return
-            end
+        if object.Name:match("^%d+Shells?%d+$") then
+            createVisuals(object)
+            return
+        end
 
-            local parent = object.Parent
-            if parent then
-                if parent.Name:match("^%d+Shells?$") then
-                    createVisuals(object)
-                end
+        local parent = object.Parent
+        if parent then
+            if parent.Name:match("^%d+Shells?$") then
+                createVisuals(object)
             end
         end
     end
@@ -129,7 +131,7 @@ function Module.CreateTab(Window)
         end
     end)
 
-    -- ## Auto Collect Loop (REWRITTEN WITHOUT 'continue') ## --
+    -- Auto Collect Loop
     task.spawn(function()
         while task.wait(0.25) do
             if Config.AutoCollectEnabled then
@@ -141,6 +143,7 @@ function Module.CreateTab(Window)
                         if item and item.Parent then
                             local distance = (playerRoot.Position - visuals.Adornee.Position).Magnitude
                             if distance <= Config.CollectRadius then
+                                -- The check correctly remains here for the auto-collector
                                 local prompt = item:FindFirstChildOfClass("ProximityPrompt", true)
                                 if prompt and prompt.Enabled then
                                     prompt:InputHoldBegin()
@@ -156,17 +159,17 @@ function Module.CreateTab(Window)
         end
     end)
 
-    -- UI Creation
+    -- ## UI Creation ## --
     local ItemESPTab = Window:CreateTab("Item ESP", "box")
     ItemESPTab:CreateSection("Ammo ESP")
-
+    
     ItemESPTab:CreateToggle({
         Name = "Enable Ammo ESP", CurrentValue = Config.Enabled, Flag = "AmmoESP_Enabled",
         Callback = function(v) Config.Enabled = v end
     })
     ItemESPTab:CreateToggle({
         Name = "Show Name", CurrentValue = Config.ShowName, Flag = "AmmoESP_ShowName",
-        Callback = function(v) Config.WebShowName = v end
+        Callback = function(v) Config.ShowName = v end
     })
     ItemESPTab:CreateToggle({
         Name = "Show Distance", CurrentValue = Config.ShowDistance, Flag = "AmmoESP_ShowDistance",
@@ -178,10 +181,11 @@ function Module.CreateTab(Window)
         Name = "Enable Aura Collect", CurrentValue = Config.AutoCollectEnabled, Flag = "Ammo_AutoCollect_Enabled",
         Callback = function(v) Config.AutoCollectEnabled = v end
     })
+    
     ItemESPTab:CreateSlider({
         Name = "Collect Radius",
-        Range = {5, 100},
-        Increment = 5,
+        Range = {5, 40},
+        Increment = 1,
         Suffix = "studs",
         CurrentValue = Config.CollectRadius,
         Flag = "Ammo_Collect_Radius",
