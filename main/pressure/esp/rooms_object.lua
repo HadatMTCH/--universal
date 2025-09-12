@@ -5,8 +5,9 @@ function Module.CreateTab(Window)
     local Players = game:GetService("Players")
     local RunService = game:GetService("RunService")
     local Workspace = game:GetService("Workspace")
+    local ReplicatedStorage = game:GetService("ReplicatedStorage")
     local LocalPlayer = Players.LocalPlayer
-    
+
     -- Configuration for the ESP
     local Config = {
         Enabled = true,
@@ -64,7 +65,7 @@ function Module.CreateTab(Window)
         trackedObjects[object] = { Highlight = highlight, Billboard = billboard, Text = textLabel, Type = objectType }
     end
 
-    -- UPDATED: Function to scan a parent (like a new room) for doors and lockers
+    -- Function to scan a parent (like a new room) for doors and lockers
     local function scanForObjects(parent)
         for _, descendant in ipairs(parent:GetDescendants()) do
             if descendant.Name == "Door" and descendant:IsA("BasePart") then
@@ -78,32 +79,46 @@ function Module.CreateTab(Window)
         end
     end
 
-    -- Path to the Rooms folder
-    local roomsFolder = Workspace:WaitForChild("GameplayFolder"):WaitForChild("Rooms")
+    ---[[ NEW: Function to perform a full re-scan of all rooms ]]---
+    local function rescanAllRooms()
+        -- First, clear all existing visuals
+        for object, _ in pairs(trackedObjects) do
+            cleanupVisuals(object)
+        end
+        
+        -- Get the current rooms folder and scan every room inside it
+        local roomsFolder = Workspace:FindFirstChild("GameplayFolder") and Workspace.GameplayFolder:FindFirstChild("Rooms")
+        if roomsFolder then
+            for _, room in ipairs(roomsFolder:GetChildren()) do
+                scanForObjects(room)
+            end
+        end
+    end
 
-    -- Initial scan of existing rooms and connect the listener for new rooms
-    for _, room in ipairs(roomsFolder:GetChildren()) do scanForObjects(room) end
-    roomsFolder.ChildAdded:Connect(scanForObjects)
+    -- Perform an initial scan when the script starts
+    task.wait(1) -- Wait a moment for the game to load
+    rescanAllRooms()
+
+    ---[[ NEW: Connect to the game's ZoneChange event ]]---
+    local eventsFolder = ReplicatedStorage:WaitForChild("Events")
+    if eventsFolder then
+        local zoneChangeEvent = eventsFolder:FindFirstChild("ZoneChange")
+        if zoneChangeEvent then
+            zoneChangeEvent.OnClientEvent:Connect(function()
+                -- When the zone changes, wait a brief moment for new rooms to load, then re-scan
+                task.wait(0.5)
+                rescanAllRooms()
+            end)
+        end
+    end
 
     -- Update loop
     RunService.RenderStepped:Connect(function()
         local camera = Workspace.CurrentCamera
-
-        ---[[ NEW: Robust Room Detection Logic ]]---
-        -- Get the current Rooms folder every frame, in case it gets replaced
-        local gameplayFolder = Workspace:FindFirstChild("GameplayFolder")
-        local roomsFolder = gameplayFolder and gameplayFolder:FindFirstChild("Rooms")
-
-        -- If the folder exists, check for new rooms to scan
-        if roomsFolder then
-            for _, room in ipairs(roomsFolder:GetChildren()) do
-                if not scannedRooms[room] then -- If we haven't seen this room before
-                    scanForObjects(room) -- Scan it for objects
-                    scannedRooms[room] = true -- Mark it as scanned
-                end
-            end
-        end
-        -------------------------------------------
+        local roomsFolder = Workspace:FindFirstChild("GameplayFolder") and Workspace.GameplayFolder:FindFirstChild("Rooms")
+        
+        ---[[ REMOVED: The old room scanning logic is no longer needed here ]]---
+        -- The ZoneChange event now handles this much more efficiently.
 
         if not Config.Enabled then
             for item, visuals in pairs(trackedObjects) do
@@ -117,7 +132,7 @@ function Module.CreateTab(Window)
         if not playerRoot then return end
 
         for object, visuals in pairs(trackedObjects) do
-            -- Updated cleanup check to handle rooms being deleted
+            -- The cleanup logic remains to handle objects being removed individually
             if not object.Parent or not roomsFolder or not object:IsDescendantOf(roomsFolder) then
                 cleanupVisuals(object)
             else
@@ -136,6 +151,7 @@ function Module.CreateTab(Window)
             end
         end
     end)
+    
     -- UI Creation
     local ItemESPTab = Window:CreateTab("Item ESP", "box")
     ItemESPTab:CreateSection("Room Object ESP")
