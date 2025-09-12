@@ -1,4 +1,4 @@
--- File: ammo.lua (TEMPORARY DEBUGGING VERSION)
+-- File: ammo.lua (Final Version)
 local Module = {}
 
 function Module.CreateTab(Window)
@@ -64,20 +64,24 @@ function Module.CreateTab(Window)
     end
 
     -----------------------------------------------------------------------------------
-    -- ## Item Detection Logic (UPDATED FOR DEBUGGING) ## --
+    -- ## Item Detection Logic (FINAL UPDATE) ## --
     -----------------------------------------------------------------------------------
     local function checkObject(object)
-        -- This will print info for every object the scanner sees
-        local parentName = object.Parent and object.Parent.Name or "nil"
-        print("ESP CHECK | Name:", object.Name, "| Class:", object.ClassName, "| Parent:", parentName)
-
         if not object:IsA("Model") then return end
 
+        -- Condition 1: Check for SmallAmmoBox by its exact name
         if object.Name == "SmallAmmoBox" then
             createVisuals(object)
             return
         end
 
+        -- Condition 2: NEW - Check for shell models whose OWN name matches the pattern (e.g., "1Shell3")
+        if object.Name:match("^%d+Shell%d+$") then
+            createVisuals(object)
+            return
+        end
+        
+        -- Condition 3: Check for shells based on their PARENT folder's name (e.g., inside a "2Shells" folder)
         local parent = object.Parent
         if parent then
             if parent.Name:match("^%d+Shells?$") then
@@ -131,7 +135,7 @@ function Module.CreateTab(Window)
     end)
 
     -- UI Creation
-    local ItemESPTab = Window:CreateTab("Item ESP", "box")
+    local ItemESPTab = Window:GetTab("Item ESP") or Window:CreateTab("Item ESP", "box")
     ItemESPTab:CreateSection("Ammo ESP")
 
     ItemESPTab:CreateToggle({
