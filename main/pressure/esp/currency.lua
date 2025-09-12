@@ -105,18 +105,18 @@ function Module.CreateTab(Window)
     end)
 
     -- UI Creation
-    local ItemESPTab = Window:GetTab("Item ESP") or Window:CreateTab("Item ESP", "box")
-    local CurrencySection = ItemESPTab:CreateSection("Currency ESP")
+    local ItemESPTab = Window:CreateTab("Item ESP", "box")
+    ItemESPTab:CreateSection("Currency ESP")
 
-    CurrencySection:CreateToggle({
+    ItemESPTab:CreateToggle({
         Name = "Enable Currency ESP", CurrentValue = Config.Enabled, Flag = "CurrencyESP_Enabled",
         Callback = function(v) Config.Enabled = v end
     })
-    CurrencySection:CreateToggle({
+    ItemESPTab:CreateToggle({
         Name = "Show Name", CurrentValue = Config.ShowName, Flag = "CurrencyESP_ShowName",
         Callback = function(v) Config.ShowName = v end
     })
-    CurrencySection:CreateToggle({
+    ItemESPTab:CreateToggle({
         Name = "Show Distance", CurrentValue = Config.ShowDistance, Flag = "CurrencyESP_ShowDistance",
         Callback = function(v) Config.ShowDistance = v end
     })

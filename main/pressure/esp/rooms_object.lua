@@ -88,6 +88,23 @@ function Module.CreateTab(Window)
     -- Update loop
     RunService.RenderStepped:Connect(function()
         local camera = Workspace.CurrentCamera
+
+        ---[[ NEW: Robust Room Detection Logic ]]---
+        -- Get the current Rooms folder every frame, in case it gets replaced
+        local gameplayFolder = Workspace:FindFirstChild("GameplayFolder")
+        local roomsFolder = gameplayFolder and gameplayFolder:FindFirstChild("Rooms")
+
+        -- If the folder exists, check for new rooms to scan
+        if roomsFolder then
+            for _, room in ipairs(roomsFolder:GetChildren()) do
+                if not scannedRooms[room] then -- If we haven't seen this room before
+                    scanForObjects(room) -- Scan it for objects
+                    scannedRooms[room] = true -- Mark it as scanned
+                end
+            end
+        end
+        -------------------------------------------
+
         if not Config.Enabled then
             for item, visuals in pairs(trackedObjects) do
                 visuals.Highlight.Enabled = false
@@ -100,11 +117,12 @@ function Module.CreateTab(Window)
         if not playerRoot then return end
 
         for object, visuals in pairs(trackedObjects) do
-            if not object.Parent or not object:IsDescendantOf(roomsFolder) then
+            -- Updated cleanup check to handle rooms being deleted
+            if not object.Parent or not roomsFolder or not object:IsDescendantOf(roomsFolder) then
                 cleanupVisuals(object)
-            else            
+            else
+                -- (The rest of your visual update logic is the same)
                 local shouldBeVisible = (visuals.Type == "Door" and Config.Doors_Enabled) or (visuals.Type == "Locker" and Config.Lockers_Enabled)
-                
                 visuals.Highlight.Enabled = shouldBeVisible
                 visuals.Billboard.Enabled = shouldBeVisible and (Config.ShowName or Config.ShowDistance)
                 
@@ -113,13 +131,11 @@ function Module.CreateTab(Window)
                     local textParts = {}
                     if Config.ShowName then table.insert(textParts, visuals.Type) end
                     if Config.ShowDistance then table.insert(textParts, string.format("[%dM]", distance)) end
-                    
                     visuals.Text.Text = table.concat(textParts, " ")
                 end
             end
         end
     end)
-
     -- UI Creation
     local ItemESPTab = Window:CreateTab("Item ESP", "box")
     ItemESPTab:CreateSection("Room Object ESP")
