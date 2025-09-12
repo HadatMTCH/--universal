@@ -99,17 +99,26 @@ function Module.CreateTab(Window)
     task.wait(1) -- Wait a moment for the game to load
     rescanAllRooms()
 
-    ---[[ NEW: Connect to the game's ZoneChange event ]]---
-    local eventsFolder = ReplicatedStorage:WaitForChild("Events")
+    ---[[ NEW: Connect to the game's ZoneChange event (with debugging) ]]---
+    print("Attempting to find remote events...")
+    local eventsFolder = ReplicatedStorage:WaitForChild("Events", 10) -- Wait up to 10 seconds
+    
     if eventsFolder then
+        print("Found 'Events' folder. Looking for 'ZoneChange'...")
         local zoneChangeEvent = eventsFolder:FindFirstChild("ZoneChange")
+        
         if zoneChangeEvent then
+            print("SUCCESS: Found 'ZoneChange' event. Connecting listener.")
             zoneChangeEvent.OnClientEvent:Connect(function()
-                -- When the zone changes, wait a brief moment for new rooms to load, then re-scan
+                print("LISTENER FIRED: 'ZoneChange' event was received!")
                 task.wait(0.5)
                 rescanAllRooms()
             end)
+        else
+            warn("ERROR: Could not find 'ZoneChange' inside ReplicatedStorage.Events.")
         end
+    else
+        warn("ERROR: Could not find 'Events' folder in ReplicatedStorage.")
     end
 
     -- Update loop
