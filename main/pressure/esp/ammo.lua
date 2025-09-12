@@ -179,8 +179,15 @@ function Module.CreateTab(Window)
         Callback = function(v) Config.AutoCollectEnabled = v end
     })
     ItemESPTab:CreateSlider({
-        Name = "Collect Radius", Min = 5, Max = 100, CurrentValue = Config.CollectRadius, Suffix = "studs", Flag = "Ammo_Collect_Radius",
-        Callback = function(v) Config.CollectRadius = v end
+        Name = "Collect Radius",
+        Range = {5, 100},
+        Increment = 5,
+        Suffix = "studs",
+        CurrentValue = Config.CollectRadius,
+        Flag = "Ammo_Collect_Radius",
+        Callback = function(v)
+            Config.CollectRadius = v
+        end
     })
 end
 
