@@ -74,13 +74,12 @@ function Module.CreateTab(Window)
         }
     end
 
-    ---[[ UPDATED: Function to scan for doors and lockers ]]---
+    -- Function to scan a single object (a room model)
     local function scanForObjects(parent)
         for _, descendant in ipairs(parent:GetDescendants()) do
-            -- UPDATED: This now finds any part named "Door", making it work for NormalDoor, BigDoor, etc.
-            if descendant.Name == "Door" and descendant:IsA("BasePart") then
+            if descendant.Name == "Door" and descendant:IsA("BasePart") and descendant.Parent and
+                descendant.Parent.Parent and descendant.Parent.Parent.Name == "Entrances" then
                 createVisuals(descendant, "Door")
-            -- Locker logic is correct and unchanged
             elseif descendant.Name == "Locker" and descendant:IsA("Model") then
                 local primaryPart = descendant.PrimaryPart or descendant:FindFirstChildWhichIsA("BasePart")
                 if primaryPart then
@@ -90,22 +89,35 @@ function Module.CreateTab(Window)
         end
     end
 
+    ---[[ NEW: Function to perform a full re-scan of all rooms ]]---
+    -- This will clear everything and rebuild the ESP from scratch.
+    local function rescanAllRooms()
+        -- First, clear all existing visuals from the screen
+        for object, _ in pairs(trackedObjects) do
+            cleanupVisuals(object)
+        end
+
+        -- Then, get the current rooms folder and scan every room inside it
+        local roomsFolder = Workspace:FindFirstChild("GameplayFolder") and
+                                Workspace.GameplayFolder:FindFirstChild("Rooms")
+        if roomsFolder then
+            for _, room in ipairs(roomsFolder:GetChildren()) do
+                scanForObjects(room)
+            end
+        end
+    end
+
     -- Path to the Rooms folder
     local roomsFolder = Workspace:WaitForChild("GameplayFolder"):WaitForChild("Rooms")
 
-    -- Initial scan of existing rooms (correct)
-    for _, room in ipairs(roomsFolder:GetChildren()) do
-        scanForObjects(room)
-    end
+    -- Perform one full scan at the very beginning
+    rescanAllRooms()
 
-    ---[[ UPDATED: Made the listener more efficient ]]---
-    -- Now it only scans the new room, not all of them every time.
+    ---[[ UPDATED: The listener now triggers a full, reliable re-scan ]]---
     roomsFolder.ChildAdded:Connect(function(newRoom)
-        task.wait(1) -- Wait for room to fully load
-        scanForObjects(newRoom)
+        task.wait(1) -- A short delay is still good practice
+        rescanAllRooms()
     end)
-
-    -- [REMOVED] The redundant rescanAllRooms() function and its call.
 
     -- Update loop
     RunService.RenderStepped:Connect(function()
