@@ -23,6 +23,9 @@ function Module.CreateTab(Window)
     screenGui.Name = "RoomObjectESP_Gui"
     screenGui.ResetOnSpawn = false
 
+    ---[[ NEW: Table to track which rooms have already been scanned ]]---
+    local scannedRooms = {}
+
     -- Function to remove visuals when an object is gone
     local function cleanupVisuals(object)
         if trackedObjects[object] then
@@ -61,15 +64,12 @@ function Module.CreateTab(Window)
         trackedObjects[object] = { Highlight = highlight, Billboard = billboard, Text = textLabel, Type = objectType }
     end
 
-    -- Function to scan a parent (like a new room) for doors and lockers
+    -- UPDATED: Function to scan a parent (like a new room) for doors and lockers
     local function scanForObjects(parent)
         for _, descendant in ipairs(parent:GetDescendants()) do
-            -- Look for specific door parts inside a "NormalDoor" model [cite: 1]
-            if descendant.Name == "Door" and descendant:IsA("BasePart") and descendant.Parent.Name == "NormalDoor" then
+            if descendant.Name == "Door" and descendant:IsA("BasePart") then
                 createVisuals(descendant, "Door")
-            -- Look for models specifically named "Locker" [cite: 2]
             elseif descendant.Name == "Locker" and descendant:IsA("Model") then
-                -- Find a primary part to attach the visuals to
                 local primaryPart = descendant.PrimaryPart or descendant:FindFirstChildWhichIsA("BasePart")
                 if primaryPart then
                     createVisuals(primaryPart, "Locker")
