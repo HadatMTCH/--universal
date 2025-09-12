@@ -134,7 +134,7 @@ function Module.CreateTab(Window)
     end)
 
     -- UI Creation
-    local ItemESPTab = Window:GetTab("Item ESP") or Window:CreateTab("Item ESP", "box")
+    local ItemESPTab = Window:CreateTab("Ammo ESP", "box")
     ItemESPTab:CreateSection("Ammo ESP")
 
     ItemESPTab:CreateToggle({
