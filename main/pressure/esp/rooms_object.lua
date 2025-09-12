@@ -77,6 +77,7 @@ function Module.CreateTab(Window)
     -- Function to scan a parent (like a new room) for doors and lockers
     local function scanForObjects(parent)
         for _, descendant in ipairs(parent:GetDescendants()) do
+            print(descendant.Name)
             if descendant.Name == "Door" and descendant:IsA("BasePart") then
                 createVisuals(descendant, "Door")
             elseif descendant.Name == "Locker" and descendant:IsA("Model") then
