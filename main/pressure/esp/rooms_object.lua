@@ -122,25 +122,25 @@ function Module.CreateTab(Window)
 
     -- UI Creation
     local ItemESPTab = Window:CreateTab("Item ESP", "box")
-    local RoomObjectSection = ItemESPTab:CreateSection("Room Object ESP")
+    ItemESPTab:CreateSection("Room Object ESP")
 
-    RoomObjectSection:CreateToggle({
+    ItemESPTab:CreateToggle({
         Name = "Enable Room Object ESP", CurrentValue = Config.Enabled, Flag = "RoomObjectESP_Enabled",
         Callback = function(v) Config.Enabled = v end
     })
-    RoomObjectSection:CreateToggle({
+    ItemESPTab:CreateToggle({
         Name = "Show Doors", CurrentValue = Config.Doors_Enabled, Flag = "RoomObjectESP_Doors",
         Callback = function(v) Config.Doors_Enabled = v end
     })
-    RoomObjectSection:CreateToggle({
+    ItemESPTab:CreateToggle({
         Name = "Show Lockers", CurrentValue = Config.Lockers_Enabled, Flag = "RoomObjectESP_Lockers",
         Callback = function(v) Config.Lockers_Enabled = v end
     })
-    RoomObjectSection:CreateToggle({
+    ItemESPTab:CreateToggle({
         Name = "Show Name", CurrentValue = Config.ShowName, Flag = "RoomObjectESP_ShowName",
         Callback = function(v) Config.ShowName = v end
     })
-    RoomObjectSection:CreateToggle({
+    ItemESPTab:CreateToggle({
         Name = "Show Distance", CurrentValue = Config.ShowDistance, Flag = "RoomObjectESP_ShowDistance",
         Callback = function(v) Config.ShowDistance = v end
     })
