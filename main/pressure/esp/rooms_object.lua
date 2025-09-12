@@ -74,11 +74,13 @@ function Module.CreateTab(Window)
         }
     end
 
-    -- Function to scan a parent (like a new room) for doors and lockers
+    ---[[ UPDATED: Function to scan for doors and lockers ]]---
     local function scanForObjects(parent)
         for _, descendant in ipairs(parent:GetDescendants()) do
-            if descendant.Name == "Door" and parent.Name == "NormalDoor" then
+            -- UPDATED: This now finds any part named "Door", making it work for NormalDoor, BigDoor, etc.
+            if descendant.Name == "Door" and descendant:IsA("BasePart") then
                 createVisuals(descendant, "Door")
+            -- Locker logic is correct and unchanged
             elseif descendant.Name == "Locker" and descendant:IsA("Model") then
                 local primaryPart = descendant.PrimaryPart or descendant:FindFirstChildWhichIsA("BasePart")
                 if primaryPart then
@@ -91,17 +93,16 @@ function Module.CreateTab(Window)
     -- Path to the Rooms folder
     local roomsFolder = Workspace:WaitForChild("GameplayFolder"):WaitForChild("Rooms")
 
-    -- [CLEANED UP] Perform the initial scan only ONCE.
+    -- Initial scan of existing rooms (correct)
     for _, room in ipairs(roomsFolder:GetChildren()) do
         scanForObjects(room)
     end
 
-    -- Attach the listener that now we know works correctly
+    ---[[ UPDATED: Made the listener more efficient ]]---
+    -- Now it only scans the new room, not all of them every time.
     roomsFolder.ChildAdded:Connect(function(newRoom)
-        task.wait(1)
-        for _, room in ipairs(roomsFolder:GetChildren()) do
-            scanForObjects(room)
-        end
+        task.wait(1) -- Wait for room to fully load
+        scanForObjects(newRoom)
     end)
 
     -- [REMOVED] The redundant rescanAllRooms() function and its call.
