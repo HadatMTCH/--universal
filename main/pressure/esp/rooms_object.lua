@@ -98,8 +98,7 @@ function Module.CreateTab(Window)
         end
 
         -- Then, get the current rooms folder and scan every room inside it
-        local roomsFolder = Workspace:FindFirstChild("GameplayFolder") and
-                                Workspace.GameplayFolder:FindFirstChild("Rooms")
+        local roomsFolder = Workspace:FindFirstChild("GameplayFolder") and Workspace.GameplayFolder:FindFirstChild("Rooms")
         if roomsFolder then
             for _, room in ipairs(roomsFolder:GetChildren()) do
                 scanForObjects(room)
@@ -115,6 +114,7 @@ function Module.CreateTab(Window)
 
     ---[[ UPDATED: The listener now triggers a full, reliable re-scan ]]---
     roomsFolder.ChildAdded:Connect(function(newRoom)
+        print("New Room Added, scanning...")
         task.wait(1) -- A short delay is still good practice
         rescanAllRooms()
     end)
