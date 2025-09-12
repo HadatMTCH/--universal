@@ -1,0 +1,149 @@
+local Module = {}
+
+function Module.CreateTab(Window)
+    -- Services
+    local Players = game:GetService("Players")
+    local RunService = game:GetService("RunService")
+    local Workspace = game:GetService("Workspace")
+    local LocalPlayer = Players.LocalPlayer
+    
+    -- Configuration for the ESP
+    local Config = {
+        Enabled = true,
+        Doors_Enabled = true,
+        Lockers_Enabled = true,
+        ShowName = true,
+        ShowDistance = true,
+        DoorColor = Color3.fromRGB(0, 255, 127),   -- Spring Green
+        LockerColor = Color3.fromRGB(255, 165, 0) -- Orange
+    }
+
+    local trackedObjects = {}
+    local screenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
+    screenGui.Name = "RoomObjectESP_Gui"
+    screenGui.ResetOnSpawn = false
+
+    -- Function to remove visuals when an object is gone
+    local function cleanupVisuals(object)
+        if trackedObjects[object] then
+            trackedObjects[object].Highlight:Destroy()
+            trackedObjects[object].Billboard:Destroy()
+            trackedObjects[object] = nil
+        end
+    end
+
+    -- Function to create visuals for a new object
+    local function createVisuals(object, objectType)
+        if trackedObjects[object] then return end
+
+        local color = (objectType == "Door" and Config.DoorColor) or Config.LockerColor
+
+        local highlight = Instance.new("Highlight", object)
+        highlight.FillColor = color
+        highlight.FillTransparency = 0.6
+        highlight.OutlineTransparency = 1
+        highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+        
+        local billboard = Instance.new("BillboardGui", screenGui)
+        billboard.Adornee = object
+        billboard.AlwaysOnTop = true
+        billboard.Size = UDim2.new(0, 150, 0, 40)
+        billboard.StudsOffset = Vector3.new(0, 1.5, 0)
+        
+        local textLabel = Instance.new("TextLabel", billboard)
+        textLabel.Size = UDim2.fromScale(1, 1)
+        textLabel.BackgroundTransparency = 1
+        textLabel.Font = Enum.Font.GothamSemibold
+        textLabel.TextSize = 16
+        textLabel.TextColor3 = color
+        textLabel.TextStrokeTransparency = 0
+        
+        trackedObjects[object] = { Highlight = highlight, Billboard = billboard, Text = textLabel, Type = objectType }
+    end
+
+    -- Function to scan a parent (like a new room) for doors and lockers
+    local function scanForObjects(parent)
+        for _, descendant in ipairs(parent:GetDescendants()) do
+            -- Look for specific door parts inside a "NormalDoor" model [cite: 1]
+            if descendant.Name == "Door" and descendant:IsA("BasePart") and descendant.Parent.Name == "NormalDoor" then
+                createVisuals(descendant, "Door")
+            -- Look for models specifically named "Locker" [cite: 2]
+            elseif descendant.Name == "Locker" and descendant:IsA("Model") then
+                -- Find a primary part to attach the visuals to
+                local primaryPart = descendant.PrimaryPart or descendant:FindFirstChildWhichIsA("BasePart")
+                if primaryPart then
+                    createVisuals(primaryPart, "Locker")
+                end
+            end
+        end
+    end
+
+    -- Path to the Rooms folder
+    local roomsFolder = Workspace:WaitForChild("GameplayFolder"):WaitForChild("Rooms")
+
+    -- Initial scan of existing rooms and connect the listener for new rooms
+    for _, room in ipairs(roomsFolder:GetChildren()) do scanForObjects(room) end
+    roomsFolder.ChildAdded:Connect(scanForObjects)
+
+    -- Update loop
+    RunService.RenderStepped:Connect(function()
+        local camera = Workspace.CurrentCamera
+        if not Config.Enabled then
+            for item, visuals in pairs(trackedObjects) do
+                visuals.Highlight.Enabled = false
+                visuals.Billboard.Enabled = false
+            end
+            return
+        end
+
+        local playerRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if not playerRoot then return end
+
+        for object, visuals in pairs(trackedObjects) do
+            if not object.Parent or not object:IsDescendantOf(roomsFolder) then
+                cleanupVisuals(object)
+            else            
+                local shouldBeVisible = (visuals.Type == "Door" and Config.Doors_Enabled) or (visuals.Type == "Locker" and Config.Lockers_Enabled)
+                
+                visuals.Highlight.Enabled = shouldBeVisible
+                visuals.Billboard.Enabled = shouldBeVisible and (Config.ShowName or Config.ShowDistance)
+                
+                if visuals.Billboard.Enabled then
+                    local distance = (playerRoot.Position - object.Position).Magnitude
+                    local textParts = {}
+                    if Config.ShowName then table.insert(textParts, visuals.Type) end
+                    if Config.ShowDistance then table.insert(textParts, string.format("[%dM]", distance)) end
+                    
+                    visuals.Text.Text = table.concat(textParts, " ")
+                end
+            end
+        end
+    end)
+
+    -- UI Creation
+    local ItemESPTab = Window:CreateTab("Item ESP", "box")
+    local RoomObjectSection = ItemESPTab:CreateSection("Room Object ESP")
+
+    RoomObjectSection:CreateToggle({
+        Name = "Enable Room Object ESP", CurrentValue = Config.Enabled, Flag = "RoomObjectESP_Enabled",
+        Callback = function(v) Config.Enabled = v end
+    })
+    RoomObjectSection:CreateToggle({
+        Name = "Show Doors", CurrentValue = Config.Doors_Enabled, Flag = "RoomObjectESP_Doors",
+        Callback = function(v) Config.Doors_Enabled = v end
+    })
+    RoomObjectSection:CreateToggle({
+        Name = "Show Lockers", CurrentValue = Config.Lockers_Enabled, Flag = "RoomObjectESP_Lockers",
+        Callback = function(v) Config.Lockers_Enabled = v end
+    })
+    RoomObjectSection:CreateToggle({
+        Name = "Show Name", CurrentValue = Config.ShowName, Flag = "RoomObjectESP_ShowName",
+        Callback = function(v) Config.ShowName = v end
+    })
+    RoomObjectSection:CreateToggle({
+        Name = "Show Distance", CurrentValue = Config.ShowDistance, Flag = "RoomObjectESP_ShowDistance",
+        Callback = function(v) Config.ShowDistance = v end
+    })
+end
+
+return Module
