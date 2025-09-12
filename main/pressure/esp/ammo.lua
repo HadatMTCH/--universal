@@ -1,4 +1,4 @@
--- File: ammo.lua (Updated with Room Listener)
+-- File: ammo.lua (Updated to scan two RoomsFolders)
 local Module = {}
 
 function Module.CreateTab(Window)
@@ -13,7 +13,7 @@ function Module.CreateTab(Window)
         Enabled = true,
         ShowName = true,
         ShowDistance = true,
-        GlowColor = Color3.fromRGB(0, 255, 100) -- A green color for ammo
+        GlowColor = Color3.fromRGB(0, 255, 100)
     }
 
     local trackedAmmo = {}
@@ -21,7 +21,6 @@ function Module.CreateTab(Window)
     screenGui.Name = "AmmoESP_Gui"
     screenGui.ResetOnSpawn = false
 
-    -- Function to remove visuals when an item is gone
     local function cleanupVisuals(item)
         if trackedAmmo[item] then
             if trackedAmmo[item].Highlight then trackedAmmo[item].Highlight:Destroy() end
@@ -30,13 +29,10 @@ function Module.CreateTab(Window)
         end
     end
 
-    -- Function to create visuals for a new ammo item
     local function createVisuals(model)
         if trackedAmmo[model] then return end
-
-        -- Prioritize 'ProxyPart' as seen in your structure, otherwise find any BasePart.
         local adorneePart = model:FindFirstChild("ProxyPart") or model:FindFirstChildWhichIsA("BasePart")
-        if not adorneePart then return end -- Can't create ESP without a part to attach to
+        if not adorneePart then return end
 
         local highlight = Instance.new("Highlight", model)
         highlight.FillColor = Config.GlowColor
@@ -60,7 +56,6 @@ function Module.CreateTab(Window)
         
         trackedAmmo[model] = { Highlight = highlight, Billboard = billboard, Text = textLabel, Adornee = adorneePart }
         
-        -- Handle item being destroyed
         model.AncestryChanged:Connect(function(_, parent)
             if not parent then
                 cleanupVisuals(model)
@@ -68,31 +63,48 @@ function Module.CreateTab(Window)
         end)
     end
 
-    -- Function to find Ammo items based on your game's structure
+    -- Item Detection Logic (No changes here)
     local function checkObject(object)
-        if object:IsA("Model") then
-            -- Check for 'SmallAmmoBox' or models containing "Shells" like '2Shells3'
-            if object.Name == "SmallAmmoBox" or object.Name:find("Shells") then
+        if not object:IsA("Model") then return end
+
+        if object.Name == "SmallAmmoBox" then
+            createVisuals(object)
+            return
+        end
+
+        local parent = object.Parent
+        if parent then
+            if parent.Name:match("^%d+Shells?$") then
                 createVisuals(object)
             end
         end
     end
     
     -----------------------------------------------------------------------------------
-    -- ## Scanning and Listening Logic (CORRECTED & SIMPLIFIED) ## --
+    -- ## Scanning and Listening Logic (UPDATED SECTION) ## --
     -----------------------------------------------------------------------------------
-    local roomsFolder = Workspace:WaitForChild("GameplayFolder"):WaitForChild("Rooms")
+    -- This function contains the logic to scan a folder and listen for new items
+    local function setupScannerForFolder(folder)
+        if not folder then return end -- Safety check
 
-    -- 1. Scan everything that already exists at the start
-    for _, descendant in ipairs(roomsFolder:GetDescendants()) do
-        checkObject(descendant)
+        -- 1. Scan everything that already exists at the start
+        for _, descendant in ipairs(folder:GetDescendants()) do
+            checkObject(descendant)
+        end
+
+        -- 2. Use a listener to catch anything new
+        folder.DescendantAdded:Connect(checkObject)
     end
 
-    -- 2. Use ONE powerful listener to catch anything new added anywhere inside RoomsFolder
-    -- This includes new rooms, and new items inside any room, at any time.
-    roomsFolder.DescendantAdded:Connect(checkObject)
+    -- Get references to both Rooms folders
+    local gameplayRoomsFolder = Workspace:WaitForChild("GameplayFolder"):WaitForChild("Rooms")
+    local workspaceRoomsFolder = Workspace:WaitForChild("RoomsFolder")
+
+    -- Set up the scanner for both folders
+    setupScannerForFolder(gameplayRoomsFolder)
+    setupScannerForFolder(workspaceRoomsFolder)
     -----------------------------------------------------------------------------------
-    
+
     -- Update loop
     RunService.RenderStepped:Connect(function()
         if not Config.Enabled then
@@ -122,7 +134,7 @@ function Module.CreateTab(Window)
     end)
 
     -- UI Creation
-    local ItemESPTab = Window:CreateTab("Ammo ESP", "box")
+    local ItemESPTab = Window:CreateTab("Item ESP", "box")
     ItemESPTab:CreateSection("Ammo ESP")
 
     ItemESPTab:CreateToggle({
