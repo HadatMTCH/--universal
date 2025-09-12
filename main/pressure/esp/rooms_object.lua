@@ -93,22 +93,13 @@ function Module.CreateTab(Window)
 
     -- [CLEANED UP] Perform the initial scan only ONCE.
     for _, room in ipairs(roomsFolder:GetChildren()) do
-        print("room")
-        print(room)
-        print("room")
         scanForObjects(room)
     end
 
     -- Attach the listener that now we know works correctly
     roomsFolder.ChildAdded:Connect(function(newRoom)
-        print("newRoom")
-        print(newRoom)
-        print("newRoom")
-        task.wait(1) -- Small delay for room contents to load
+        task.wait(1)
         for _, room in ipairs(roomsFolder:GetChildren()) do
-            print("room")
-            print(room)
-            print("room")
             scanForObjects(room)
         end
     end)
