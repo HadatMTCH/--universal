@@ -5,9 +5,8 @@ function Module.CreateTab(Window)
     local Players = game:GetService("Players")
     local RunService = game:GetService("RunService")
     local Workspace = game:GetService("Workspace")
-    local ReplicatedStorage = game:GetService("ReplicatedStorage")
     local LocalPlayer = Players.LocalPlayer
-
+    
     -- Configuration for the ESP
     local Config = {
         Enabled = true,
@@ -24,8 +23,9 @@ function Module.CreateTab(Window)
     screenGui.Name = "RoomObjectESP_Gui"
     screenGui.ResetOnSpawn = false
 
-    ---[[ NEW: Table to track which rooms have already been scanned ]]---
-    local scannedRooms = {}
+    ---[[ NEW: State variables for the Folder Watcher ]]---
+    local currentRoomsFolder = nil
+    local roomListenerConnection = nil
 
     -- Function to remove visuals when an object is gone
     local function cleanupVisuals(object)
@@ -79,14 +79,11 @@ function Module.CreateTab(Window)
         end
     end
 
-    ---[[ NEW: Function to perform a full re-scan of all rooms ]]---
+    -- This function still performs a full re-scan
     local function rescanAllRooms()
-        -- First, clear all existing visuals
         for object, _ in pairs(trackedObjects) do
             cleanupVisuals(object)
         end
-        
-        -- Get the current rooms folder and scan every room inside it
         local roomsFolder = Workspace:FindFirstChild("GameplayFolder") and Workspace.GameplayFolder:FindFirstChild("Rooms")
         if roomsFolder then
             for _, room in ipairs(roomsFolder:GetChildren()) do
@@ -95,46 +92,41 @@ function Module.CreateTab(Window)
         end
     end
 
+
     -- Perform an initial scan when the script starts
     task.wait(1) -- Wait a moment for the game to load
     rescanAllRooms()
 
-    ---[[ NEW: Connect to the game's ZoneChange event (with debugging) ]]---
-    print("Attempting to find remote events...")
-    local eventsFolder = ReplicatedStorage:WaitForChild("Events", 10)
-    
-    if eventsFolder then
-        -- UPDATED: Now looking for ServerZoneChange
-        print("Found 'Events' folder. Looking for 'ServerZoneChange'...")
-        local zoneChangeEvent = eventsFolder:FindFirstChild("ServerZoneChange")
-        
-        if zoneChangeEvent then
-            print("SUCCESS: Found 'ServerZoneChange' event. Connecting listener.")
-            zoneChangeEvent.OnClientEvent:Connect(function()
-                print("LISTENER FIRED: 'ServerZoneChange' event was received!")
-                task.wait(0.5)
-                rescanAllRooms()
-            end)
-        else
-            warn("ERROR: Could not find 'ServerZoneChange' inside ReplicatedStorage.Events. Trying 'ZoneChange' as a fallback...")
-            -- Fallback to the old event just in case
-            zoneChangeEvent = eventsFolder:FindFirstChild("ZoneChange")
-            if zoneChangeEvent then
-                 -- This probably won't fire, but it's safe to keep as a backup
-                zoneChangeEvent.OnClientEvent:Connect(function() rescanAllRooms() end)
-            end
-        end
-    else
-        warn("ERROR: Could not find 'Events' folder in ReplicatedStorage.")
-    end
-
     -- Update loop
     RunService.RenderStepped:Connect(function()
-        local camera = Workspace.CurrentCamera
-        local roomsFolder = Workspace:FindFirstChild("GameplayFolder") and Workspace.GameplayFolder:FindFirstChild("Rooms")
-        
-        ---[[ REMOVED: The old room scanning logic is no longer needed here ]]---
-        -- The ZoneChange event now handles this much more efficiently.
+        ---[[ NEW: Folder Watcher Logic ]]---
+        -- This block runs every frame to ensure we're always listening to the CORRECT Rooms folder.
+        local gameplayFolder = Workspace:FindFirstChild("GameplayFolder")
+        local latestRoomsFolder = gameplayFolder and gameplayFolder:FindFirstChild("Rooms")
+
+        -- Check if the Rooms folder is new or has been replaced
+        if latestRoomsFolder and latestRoomsFolder ~= currentRoomsFolder then
+            print("New Rooms folder detected! Setting up listener and re-scanning.")
+            
+            -- Disconnect the old listener if it exists
+            if roomListenerConnection then
+                roomListenerConnection:Disconnect()
+            end
+
+            -- Update our reference to the new folder
+            currentRoomsFolder = latestRoomsFolder
+            
+            -- Perform a full re-scan immediately
+            rescanAllRooms()
+
+            -- Connect a new listener to the new folder
+            roomListenerConnection = currentRoomsFolder.ChildAdded:Connect(function(newRoom)
+                -- When a new room is added, wait a moment then scan it
+                task.wait(0.5)
+                scanForObjects(newRoom)
+            end)
+        end
+        -------------------------------------------
 
         if not Config.Enabled then
             for item, visuals in pairs(trackedObjects) do
@@ -148,8 +140,8 @@ function Module.CreateTab(Window)
         if not playerRoot then return end
 
         for object, visuals in pairs(trackedObjects) do
-            -- The cleanup logic remains to handle objects being removed individually
-            if not object.Parent or not roomsFolder or not object:IsDescendantOf(roomsFolder) then
+            -- Updated cleanup check
+            if not object.Parent or not currentRoomsFolder or not object:IsDescendantOf(currentRoomsFolder) then
                 cleanupVisuals(object)
             else
                 -- (The rest of your visual update logic is the same)
