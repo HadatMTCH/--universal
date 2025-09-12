@@ -39,6 +39,12 @@ objectEsp.CreateTab(Window)
 local monsterEsp = loadstring(game:HttpGet("https://raw.githubusercontent.com/HadatMTCH/--universal/refs/heads/master/main/pressure/esp/monster.lua"))()
 monsterEsp.CreateTab(Window)
 
+local currencyEsp = loadstring(game:HttpGet("https://raw.githubusercontent.com/HadatMTCH/--universal/refs/heads/master/main/pressure/esp/currency.lua"))()
+currencyEsp.CreateTab(Window)
+
+local rooms_objectEsp = loadstring(game:HttpGet("https://raw.githubusercontent.com/HadatMTCH/--universal/refs/heads/master/main/pressure/esp/rooms_object.lua"))()
+rooms_objectEsp.CreateTab(Window)
+
 -- ===================================================================
 -- 3. FINAL SETUP
 -- ===================================================================
