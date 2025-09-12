@@ -1,4 +1,3 @@
--- File: ammo.lua (Final Version - Corrected)
 local Module = {}
 
 function Module.CreateTab(Window)
@@ -8,12 +7,16 @@ function Module.CreateTab(Window)
     local Workspace = game:GetService("Workspace")
     local LocalPlayer = Players.LocalPlayer
 
-    -- Configuration for the Ammo ESP
+    -- Configuration
     local Config = {
+        -- ESP Config
         Enabled = true,
         ShowName = true,
         ShowDistance = true,
-        GlowColor = Color3.fromRGB(0, 255, 100)
+        GlowColor = Color3.fromRGB(0, 255, 100),
+        -- Auto Collect Config
+        AutoCollectEnabled = false,
+        CollectRadius = 10 -- The range in studs for auto-collection
     }
 
     local trackedAmmo = {}
@@ -63,35 +66,28 @@ function Module.CreateTab(Window)
         end)
     end
 
-    -----------------------------------------------------------------------------------
-    -- ## Item Detection Logic (FINAL UPDATE) ## --
-    -----------------------------------------------------------------------------------
     local function checkObject(object)
         if not object:IsA("Model") then return end
-
-        -- Condition 1: Check for SmallAmmoBox by its exact name
-        if object.Name == "SmallAmmoBox" then
-            createVisuals(object)
-            return
-        end
-
-        -- Condition 2: Check for shell models whose OWN name matches the pattern (e.g., "1Shell3", "2Shells3")
-        if object.Name:match("^%d+Shells?%d+$") then -- This line is now corrected
-            createVisuals(object)
-            return
-        end
-        
-        -- Condition 3: Check for shells based on their PARENT folder's name (e.g., inside a "2Shells" folder)
-        local parent = object.Parent
-        if parent then
-            if parent.Name:match("^%d+Shells?$") then
+        if object:FindFirstChildOfClass("ProximityPrompt", true) then
+             if object.Name == "SmallAmmoBox" then
                 createVisuals(object)
+                return
+            end
+
+            if object.Name:match("^%d+Shells?%d+$") then
+                createVisuals(object)
+                return
+            end
+
+            local parent = object.Parent
+            if parent then
+                if parent.Name:match("^%d+Shells?$") then
+                    createVisuals(object)
+                end
             end
         end
     end
-    -----------------------------------------------------------------------------------
 
-    -- Scanning and Listening Logic
     local function setupScannerForFolder(folder)
         if not folder then return end
         for _, descendant in ipairs(folder:GetDescendants()) do
@@ -102,7 +98,6 @@ function Module.CreateTab(Window)
 
     local gameplayRoomsFolder = Workspace:WaitForChild("GameplayFolder"):WaitForChild("Rooms")
     local workspaceRoomsFolder = Workspace:WaitForChild("RoomsFolder")
-
     setupScannerForFolder(gameplayRoomsFolder)
     setupScannerForFolder(workspaceRoomsFolder)
     
@@ -134,6 +129,33 @@ function Module.CreateTab(Window)
         end
     end)
 
+    -- ## Auto Collect Loop (REWRITTEN WITHOUT 'continue') ## --
+    task.spawn(function()
+        while task.wait(0.25) do
+            if Config.AutoCollectEnabled then
+                local playerCharacter = LocalPlayer.Character
+                local playerRoot = playerCharacter and playerCharacter:FindFirstChild("HumanoidRootPart")
+
+                if playerRoot then
+                    for item, visuals in pairs(trackedAmmo) do
+                        if item and item.Parent then
+                            local distance = (playerRoot.Position - visuals.Adornee.Position).Magnitude
+                            if distance <= Config.CollectRadius then
+                                local prompt = item:FindFirstChildOfClass("ProximityPrompt", true)
+                                if prompt and prompt.Enabled then
+                                    prompt:InputHoldBegin()
+                                    task.wait()
+                                    prompt:InputHoldEnd()
+                                    break
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end)
+
     -- UI Creation
     local ItemESPTab = Window:CreateTab("Item ESP", "box")
     ItemESPTab:CreateSection("Ammo ESP")
@@ -149,6 +171,16 @@ function Module.CreateTab(Window)
     ItemESPTab:CreateToggle({
         Name = "Show Distance", CurrentValue = Config.ShowDistance, Flag = "AmmoESP_ShowDistance",
         Callback = function(v) Config.ShowDistance = v end
+    })
+
+    ItemESPTab:CreateSection("Auto Collect")
+    ItemESPTab:CreateToggle({
+        Name = "Enable Aura Collect", CurrentValue = Config.AutoCollectEnabled, Flag = "Ammo_AutoCollect_Enabled",
+        Callback = function(v) Config.AutoCollectEnabled = v end
+    })
+    ItemESPTab:CreateSlider({
+        Name = "Collect Radius", Min = 5, Max = 100, CurrentValue = Config.CollectRadius, Suffix = "studs", Flag = "Ammo_Collect_Radius",
+        Callback = function(v) Config.CollectRadius = v end
     })
 end
 
