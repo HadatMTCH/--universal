@@ -1,4 +1,4 @@
--- File: ammo.lua (Updated to scan two RoomsFolders)
+-- File: ammo.lua (TEMPORARY DEBUGGING VERSION)
 local Module = {}
 
 function Module.CreateTab(Window)
@@ -63,8 +63,14 @@ function Module.CreateTab(Window)
         end)
     end
 
-    -- Item Detection Logic (No changes here)
+    -----------------------------------------------------------------------------------
+    -- ## Item Detection Logic (UPDATED FOR DEBUGGING) ## --
+    -----------------------------------------------------------------------------------
     local function checkObject(object)
+        -- This will print info for every object the scanner sees
+        local parentName = object.Parent and object.Parent.Name or "nil"
+        print("ESP CHECK | Name:", object.Name, "| Class:", object.ClassName, "| Parent:", parentName)
+
         if not object:IsA("Model") then return end
 
         if object.Name == "SmallAmmoBox" then
@@ -79,32 +85,23 @@ function Module.CreateTab(Window)
             end
         end
     end
-    
     -----------------------------------------------------------------------------------
-    -- ## Scanning and Listening Logic (UPDATED SECTION) ## --
-    -----------------------------------------------------------------------------------
-    -- This function contains the logic to scan a folder and listen for new items
-    local function setupScannerForFolder(folder)
-        if not folder then return end -- Safety check
 
-        -- 1. Scan everything that already exists at the start
+    -- Scanning and Listening Logic
+    local function setupScannerForFolder(folder)
+        if not folder then return end
         for _, descendant in ipairs(folder:GetDescendants()) do
             checkObject(descendant)
         end
-
-        -- 2. Use a listener to catch anything new
         folder.DescendantAdded:Connect(checkObject)
     end
 
-    -- Get references to both Rooms folders
     local gameplayRoomsFolder = Workspace:WaitForChild("GameplayFolder"):WaitForChild("Rooms")
     local workspaceRoomsFolder = Workspace:WaitForChild("RoomsFolder")
 
-    -- Set up the scanner for both folders
     setupScannerForFolder(gameplayRoomsFolder)
     setupScannerForFolder(workspaceRoomsFolder)
-    -----------------------------------------------------------------------------------
-
+    
     -- Update loop
     RunService.RenderStepped:Connect(function()
         if not Config.Enabled then
