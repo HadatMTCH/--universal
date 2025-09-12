@@ -77,34 +77,20 @@ function Module.CreateTab(Window)
             end
         end
     end
-
+    
     -----------------------------------------------------------------------------------
-    -- ## Scanning and Listening Logic (UPDATED SECTION) ## --
+    -- ## Scanning and Listening Logic (CORRECTED & SIMPLIFIED) ## --
     -----------------------------------------------------------------------------------
     local roomsFolder = Workspace:WaitForChild("GameplayFolder"):WaitForChild("Rooms")
 
-    -- This function scans a room model and then listens for new items spawning within it
-    local function scanAndListenToRoom(room)
-        print("New room added or removed! Scanning...")
-        if not (room:IsA("Model") or room:IsA("Folder")) then return end
-
-        -- 1. Scan the entire room for any items that already exist inside
-        for _, descendant in ipairs(room:GetDescendants()) do
-            checkObject(descendant)
-        end
-        
-        -- 2. Listen for any NEW items that get added to this specific room later
-        room.DescendantAdded:Connect(checkObject)
+    -- 1. Scan everything that already exists at the start
+    for _, descendant in ipairs(roomsFolder:GetDescendants()) do
+        checkObject(descendant)
     end
 
-    -- Scan all rooms that already exist when the script first runs
-    for _, existingRoom in ipairs(roomsFolder:GetChildren()) do
-        scanAndListenToRoom(existingRoom)
-    end
-    
-    -- Listen for completely NEW rooms being added to the RoomsFolder
-    roomsFolder.ChildAdded:Connect(scanAndListenToRoom)
-    roomsFolder.ChildRemoved:Connect(scanAndListenToRoom)
+    -- 2. Use ONE powerful listener to catch anything new added anywhere inside RoomsFolder
+    -- This includes new rooms, and new items inside any room, at any time.
+    roomsFolder.DescendantAdded:Connect(checkObject)
     -----------------------------------------------------------------------------------
     
     -- Update loop
