@@ -85,6 +85,7 @@ function Module.CreateTab(Window)
 
     -- This function scans a room model and then listens for new items spawning within it
     local function scanAndListenToRoom(room)
+        print("New room added or removed! Scanning...")
         if not (room:IsA("Model") or room:IsA("Folder")) then return end
 
         -- 1. Scan the entire room for any items that already exist inside
@@ -103,6 +104,7 @@ function Module.CreateTab(Window)
     
     -- Listen for completely NEW rooms being added to the RoomsFolder
     roomsFolder.ChildAdded:Connect(scanAndListenToRoom)
+    roomsFolder.ChildRemoved:Connect(scanAndListenToRoom)
     -----------------------------------------------------------------------------------
     
     -- Update loop
