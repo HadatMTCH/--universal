@@ -1,4 +1,4 @@
--- File: ammo.lua (Final Version)
+-- File: ammo.lua (Final Version - Corrected)
 local Module = {}
 
 function Module.CreateTab(Window)
@@ -75,8 +75,8 @@ function Module.CreateTab(Window)
             return
         end
 
-        -- Condition 2: NEW - Check for shell models whose OWN name matches the pattern (e.g., "1Shell3")
-        if object.Name:match("^%d+Shell%d+$") then
+        -- Condition 2: Check for shell models whose OWN name matches the pattern (e.g., "1Shell3", "2Shells3")
+        if object.Name:match("^%d+Shells?%d+$") then -- This line is now corrected
             createVisuals(object)
             return
         end
@@ -144,7 +144,7 @@ function Module.CreateTab(Window)
     })
     ItemESPTab:CreateToggle({
         Name = "Show Name", CurrentValue = Config.ShowName, Flag = "AmmoESP_ShowName",
-        Callback = function(v) Config.ShowName = v end
+        Callback = function(v) Config.WebShowName = v end
     })
     ItemESPTab:CreateToggle({
         Name = "Show Distance", CurrentValue = Config.ShowDistance, Flag = "AmmoESP_ShowDistance",
