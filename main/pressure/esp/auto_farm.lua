@@ -115,7 +115,7 @@ function Module.CreateTab(Window, Network)
     end)
 
     -- UI Creation
-    local FarmTab = Window:CreateTab("Pressure Farm", "dollar")
+    local FarmTab = Window:CreateTab("Pressure Farm", "badge-dollar-sign")
     FarmTab:CreateSection("ESP Settings")
     FarmTab:CreateToggle({ Name = "Currency ESP", CurrentValue = Config.EnableCurrencyESP, Callback = function(v) Config.EnableCurrencyESP = v end })
     FarmTab:CreateToggle({ Name = "Item ESP", CurrentValue = Config.EnableItemESP, Callback = function(v) Config.EnableItemESP = v end })
