@@ -85,12 +85,19 @@ function Module.CreateTab(Window, Network)
 
         -- Auto Grab Logic
         if Config.EnableAutoGrab then
-            for i, prompt in ipairs(promptsToGrab) do
+            for i = #promptsToGrab, 1, -1 do -- Loop backwards when removing items
+                local prompt = promptsToGrab[i]
                 if prompt and prompt.Parent then
                     local itemModel = prompt.Parent.Parent
-                    if (itemModel:GetPivot().Position - playerRoot.Position).Magnitude <= Config.Radius then
-                        Network:FireProximityPrompt(prompt, false) -- Use the Network library
+                    if itemModel then
+                        if (itemModel:GetPivot().Position - playerRoot.Position).Magnitude <= Config.Radius then
+                            Network:FireProximityPrompt(prompt, false) -- Use the Network library
+                        end
+                    else
+                        -- If the model doesn't exist, the prompt is invalid, so remove it.
+                        table.remove(promptsToGrab, i)
                     end
+
                 else
                     table.remove(promptsToGrab, i)
                 end
@@ -113,7 +120,7 @@ function Module.CreateTab(Window, Network)
             end
         end
     end)
-
+    
     -- UI Creation
     local FarmTab = Window:CreateTab("Pressure Farm", "badge-dollar-sign")
     FarmTab:CreateSection("ESP Settings")
