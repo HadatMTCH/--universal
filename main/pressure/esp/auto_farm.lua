@@ -7,57 +7,75 @@ function Module.CreateTab(Window, Network)
     local Workspace = game:GetService("Workspace")
     local LocalPlayer = Players.LocalPlayer
 
-    -- UPDATED: Configuration table
     local Config = {
         EnableCurrencyESP = true,
         EnableItemESP = true,
-        EnableAmmoESP = true,
-        EnableAutoGrab = false, -- Unified toggle
-        ExtraRadiusPercent = 50
+        EnableAutoGrab = false,
+        RadiusPercent = 0
     }
 
     -- State tables
     local trackedObjects = {}
-    local promptsToGrab = {} -- Unified list for all collectibles
-    local originalPromptDistances = {}
+    local promptsToGrab = {}
+    local originalPromptDistances = {} -- NEW: Table to store original distances
     local screenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
     screenGui.Name = "AutofarmESP_Gui"
     screenGui.ResetOnSpawn = false
-    
-    -- UPDATED: createVisuals now finds a valid BasePart to attach the billboard to
+
     local function createVisuals(object, objectType, color, text)
-        if trackedObjects[object] then return end
-        
-        local adorneePart = object:IsA("BasePart") and object or object.PrimaryPart or object:FindFirstChildWhichIsA("BasePart")
-        if not adorneePart then return end -- Cannot create ESP without a part
+        if trackedObjects[object] then
+            return
+        end
 
         local highlight = Instance.new("Highlight", object)
-        highlight.FillColor = color; highlight.FillTransparency = 0.6; highlight.OutlineTransparency = 1; highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-        
+        highlight.FillColor = color
+        highlight.FillTransparency = 0.6
+        highlight.OutlineTransparency = 1
+        highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+
         local billboard = Instance.new("BillboardGui", screenGui)
-        billboard.Adornee = adorneePart -- Attach to the found part
-        billboard.AlwaysOnTop = true; billboard.Size = UDim2.new(0, 150, 0, 40); billboard.StudsOffset = Vector3.new(0, 1.5, 0)
-        
+        billboard.Adornee = object
+        billboard.AlwaysOnTop = true
+        billboard.Size = UDim2.new(0, 150, 0, 40)
+        billboard.StudsOffset = Vector3.new(0, 1.5, 0)
+
         local textLabel = Instance.new("TextLabel", billboard)
-        textLabel.Size = UDim2.fromScale(1, 1); textLabel.BackgroundTransparency = 1; textLabel.Font = Enum.Font.GothamSemibold; textLabel.TextSize = 16; textLabel.TextColor3 = color; textLabel.TextStrokeTransparency = 0
-        
-        trackedObjects[object] = { Highlight = highlight, Billboard = billboard, Text = textLabel, Type = objectType, BaseText = text, Adornee = adorneePart }
+        textLabel.Size = UDim2.fromScale(1, 1)
+        textLabel.BackgroundTransparency = 1
+        textLabel.Font = Enum.Font.GothamSemibold
+        textLabel.TextSize = 16
+        textLabel.TextColor3 = color
+        textLabel.TextStrokeTransparency = 0
+
+        trackedObjects[object] = {
+            Highlight = highlight,
+            Billboard = billboard,
+            Text = textLabel,
+            Type = objectType,
+            BaseText = text
+        }
     end
 
     local function cleanupVisuals(object)
         if trackedObjects[object] then
-            if trackedObjects[object].Highlight then trackedObjects[object].Highlight:Destroy() end
-            if trackedObjects[object].Billboard then trackedObjects[object].Billboard:Destroy() end
+            if trackedObjects[object].Highlight then
+                trackedObjects[object].Highlight:Destroy()
+            end
+            if trackedObjects[object].Billboard then
+                trackedObjects[object].Billboard:Destroy()
+            end
             trackedObjects[object] = nil
         end
     end
 
     local triggerCooldowns = {}
     local function forceTriggerPrompt(prompt)
-        if not prompt or not prompt.Parent or triggerCooldowns[prompt] then return end
+        if not prompt or not prompt.Parent or triggerCooldowns[prompt] then
+            return
+        end
 
         triggerCooldowns[prompt] = true
-        
+
         -- 1. Save the prompt's original properties
         local originalParent = prompt.Parent
         local originalMaxDistance = prompt.MaxActivationDistance
@@ -69,15 +87,15 @@ function Module.CreateTab(Window, Network)
         tempPart.Transparency = 1
         tempPart.CanCollide = false
         tempPart.Anchored = true
-        
+
         prompt.Parent = tempPart
         prompt.MaxActivationDistance = math.huge
         prompt.RequiresLineOfSight = false
         prompt.Enabled = true
-        
+
         -- 3. Fire the unrestricted prompt using the network library
         Network.Other:FireProximityPrompt(prompt)
-        
+
         -- A brief wait is crucial for the game to process the event
         RunService.Heartbeat:Wait()
 
@@ -89,32 +107,34 @@ function Module.CreateTab(Window, Network)
             prompt.Enabled = originalEnabled
         end
         tempPart:Destroy()
-        
+
         -- Add a small cooldown before this prompt can be triggered again
         task.delay(0.2, function()
             triggerCooldowns[prompt] = nil
         end)
     end
 
-
     -- Central function to identify all collectible objects
     local function processObject(object)
-        if object:IsA("ProximityPrompt") then
-            print("prox detected")
-            if originalPromptDistances[object] then return end
-            local parentModel = object.Parent and object.Parent.Parent
-            if not (parentModel and parentModel:IsA("Model")) then return end
+        if not object or not object.Parent or not object:IsA("ProximityPrompt") then
+            return
+        end
+        if originalPromptDistances[object] then
+            return
+        end -- Already processed
 
-            originalPromptDistances[object] = object.MaxActivationDistance
+        local parentModel = object.Parent and object.Parent.Parent
+        if not (parentModel and parentModel:IsA("Model")) then
+            return
+        end
 
-            if parentModel:GetAttribute("Amount") then
-                local amount = parentModel:GetAttribute("Amount")
-                createVisuals(parentModel, "Currency", Color3.fromRGB(255, 220, 0), "Currency ("..amount..")")
-                table.insert(promptsToGrab, object) -- Add to unified list
-            elseif not parentModel:FindFirstChild("Enter", true) then
-                 createVisuals(parentModel, "Item", Color3.fromRGB(0, 180, 255), "Item")
-            end
-        elseif object:IsA("Model") and (object.Name == "SmallAmmoBox" or object.Name:match("^%d+Shells?%d+$")) then
+        originalPromptDistances[object] = object.MaxActivationDistance
+
+        if parentModel:GetAttribute("Amount") then
+            local amount = parentModel:GetAttribute("Amount")
+            createVisuals(parentModel, "Currency", Color3.fromRGB(255, 220, 0), "Currency (" .. amount .. ")")
+            table.insert(promptsToGrab, object)
+        elseif parentModel.Name == "SmallAmmoBox" or parentModel.Name:match("^%d+Shells?%d+$") then
             local prompt = object:FindFirstChildOfClass("ProximityPrompt", true)
             if prompt and not originalPromptDistances[prompt] then
                 originalPromptDistances[prompt] = prompt.MaxActivationDistance
@@ -124,30 +144,35 @@ function Module.CreateTab(Window, Network)
             end
         end
     end
-    
+
     -- Initial scan and listener for new items
-    for _, v in ipairs(Workspace:GetDescendants()) do task.spawn(processObject, v) end
+    for _, v in ipairs(Workspace:GetDescendants()) do
+        task.spawn(processObject, v)
+    end
     Workspace.DescendantAdded:Connect(processObject)
 
     -- Main update loop
     RunService.RenderStepped:Connect(function()
         local playerRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-        if not playerRoot then return end
+        if not playerRoot then
+            return
+        end
 
-        -- UPDATED: Auto Grab logic with your requested distance check
+        -- Auto Grab Logic
         if Config.EnableAutoGrab then
             for i = #promptsToGrab, 1, -1 do
                 local prompt = promptsToGrab[i]
                 if prompt and prompt.Parent and prompt.Parent.Parent then
-                    local itemModel = prompt.Parent.Parent
+
+                    ---[[ THE ONLY CHANGE IS ON THIS LINE ]]---
+                    -- Instead of getting the position from the model, get it from the prompt's direct parent part.
                     local itemPosition = prompt.Parent.Position
-                    
+
                     local originalRange = originalPromptDistances[prompt] or prompt.MaxActivationDistance
-                    local totalRange = originalRange * (1 + (Config.ExtraRadiusPercent / 100))
-                    local distance = (itemPosition - playerRoot.Position).Magnitude
-                    
+                    local totalRange = originalRange * (1 + (Config.RadiusPercent / 100))
+                    local distance = (itemPosition - playerRoot.Position).Magnitude -- Use the new itemPosition variable
+
                     if distance <= totalRange then
-                        print("prompt triggered")
                         forceTriggerPrompt(prompt)
                     end
                 else
@@ -158,24 +183,16 @@ function Module.CreateTab(Window, Network)
 
         -- ESP Visual Update Logic
         for object, visuals in pairs(trackedObjects) do
-            local shouldBeCleaned = false
             if not object or not object.Parent then
-                shouldBeCleaned = true
-            elseif visuals.Type == "Currency" or visuals.Type == "Ammo" or visuals.Type == "Item" then
-                if not object:FindFirstChildOfClass("ProximityPrompt", true) then
-                    shouldBeCleaned = true
-                end
-            end
-
-            if shouldBeCleaned then
                 cleanupVisuals(object)
             else
-                local shouldBeVisible = (visuals.Type == "Currency" and Config.EnableCurrencyESP) or (visuals.Type == "Item" and Config.EnableItemESP) or (visuals.Type == "Ammo" and Config.EnableAmmoESP)
+                local shouldBeVisible = (visuals.Type == "Currency" and Config.EnableCurrencyESP) or
+                                            (visuals.Type == "Item" and Config.EnableItemESP)
                 visuals.Highlight.Enabled = shouldBeVisible
                 visuals.Billboard.Enabled = shouldBeVisible
 
                 if shouldBeVisible then
-                    local distance = (playerRoot.Position - visuals.Adornee.Position).Magnitude
+                    local distance = (playerRoot.Position - object:GetPivot().Position).Magnitude
                     visuals.Text.Text = visuals.BaseText .. string.format(" [%dM]", distance)
                 end
             end
@@ -185,21 +202,40 @@ function Module.CreateTab(Window, Network)
     -- UI Creation
     local FarmTab = Window:CreateTab("Pressure Farm", "badge-dollar-sign")
     FarmTab:CreateSection("ESP Settings")
-    FarmTab:CreateToggle({ Name = "Currency ESP", CurrentValue = Config.EnableCurrencyESP, Callback = function(v) Config.EnableCurrencyESP = v end })
-    FarmTab:CreateToggle({ Name = "Item ESP", CurrentValue = Config.EnableItemESP, Callback = function(v) Config.EnableItemESP = v end })
-    FarmTab:CreateToggle({ Name = "Ammo ESP", CurrentValue = Config.EnableAmmoESP, Callback = function(v) Config.EnableAmmoESP = v end })
+    FarmTab:CreateToggle({
+        Name = "Currency ESP",
+        CurrentValue = Config.EnableCurrencyESP,
+        Callback = function(v)
+            Config.EnableCurrencyESP = v
+        end
+    })
+    FarmTab:CreateToggle({
+        Name = "Item ESP",
+        CurrentValue = Config.EnableItemESP,
+        Callback = function(v)
+            Config.EnableItemESP = v
+        end
+    })
 
     FarmTab:CreateSection("Auto-Farm Settings")
-    FarmTab:CreateToggle({ Name = "Auto Grab All Collectibles", CurrentValue = Config.EnableAutoGrab, Callback = function(v) Config.EnableAutoGrab = v end })
-    
-    FarmTab:CreateSlider({ 
-        Name = "Extra Grab Radius", 
-        Range = {0, 100}, 
-        Increment = 5, 
-        Suffix = "%", 
-        CurrentValue = Config.ExtraRadiusPercent, 
-        Flag = "Pressure_ExtraGrabPercent",
-        Callback = function(v) Config.ExtraRadiusPercent = v end 
+    FarmTab:CreateToggle({
+        Name = "Auto Grab Currency",
+        CurrentValue = Config.EnableAutoGrab,
+        Callback = function(v)
+            Config.EnableAutoGrab = v
+        end
+    })
+
+    FarmTab:CreateSlider({
+        Name = "Grab Radius Multiplier",
+        Range = {0, 100}, -- Slider from 0% to 100%
+        Increment = 5,
+        Suffix = "% Extra",
+        CurrentValue = Config.RadiusPercent,
+        Flag = "Pressure_GrabRadiusPercent",
+        Callback = function(v)
+            Config.RadiusPercent = v
+        end
     })
 end
 
