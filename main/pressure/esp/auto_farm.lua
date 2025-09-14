@@ -100,6 +100,7 @@ function Module.CreateTab(Window, Network)
     -- Central function to identify all collectible objects
     local function processObject(object)
         if object:IsA("ProximityPrompt") then
+            print("prox detected")
             if originalPromptDistances[object] then return end
             local parentModel = object.Parent and object.Parent.Parent
             if not (parentModel and parentModel:IsA("Model")) then return end
@@ -118,6 +119,7 @@ function Module.CreateTab(Window, Network)
             if prompt and not originalPromptDistances[prompt] then
                 originalPromptDistances[prompt] = prompt.MaxActivationDistance
                 createVisuals(object, "Ammo", Color3.fromRGB(0, 255, 100), "Ammo")
+                print("ammo inserted")
                 table.insert(promptsToGrab, object) -- Add to unified list
             end
         end
@@ -145,6 +147,7 @@ function Module.CreateTab(Window, Network)
                     local distance = (itemPosition - playerRoot.Position).Magnitude
                     
                     if distance <= totalRange then
+                        print("prompt triggered")
                         forceTriggerPrompt(prompt)
                     end
                 else
