@@ -323,11 +323,13 @@ local function customFireProximityPrompt(proximityPrompt, distanceCheck)
     end
     
     -- Distance check if enabled
-    if not distanceCheck then
+    if distanceCheck then
         local character = localPlayer.Character or localPlayer.CharacterAdded:Wait()
+        local rootPart = character and (character:FindFirstChild("HumanoidRootPart") or character:FindFirstChild("Torso"))
+        if not rootPart then return false end
+
         local promptPosition = getPivot(proximityPrompt.Parent).Position
-        local characterPosition = character:GetPivot().Position
-        local distance = (promptPosition - characterPosition).Magnitude
+        local distance = (promptPosition - rootPart.Position).Magnitude
         
         if distance > proximityPrompt.MaxActivationDistance then
             return false
