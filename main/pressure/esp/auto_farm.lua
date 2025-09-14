@@ -151,6 +151,7 @@ function Module.CreateTab(Window, Network)
                     print(distance)
                     -- 4. Only trigger if the player is within the new total range
                     if distance <= totalRange then
+                        print("Currency near! trigger proximity")
                         forceTriggerPrompt(prompt)
                     end
                 else
