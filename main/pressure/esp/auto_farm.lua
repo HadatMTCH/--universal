@@ -129,29 +129,22 @@ function Module.CreateTab(Window, Network)
         local playerRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
         if not playerRoot then return end
 
+        -- Auto Grab Logic
         if Config.EnableAutoGrab then
             for i = #promptsToGrab, 1, -1 do
                 local prompt = promptsToGrab[i]
                 if prompt and prompt.Parent and prompt.Parent.Parent then
-                    local itemModel = prompt.Parent.Parent
-                    ---[[ NEW DEBUG LOGS: Add this block ]]---
-                    local playerPos = playerRoot.Position
-                    local itemPos = itemModel:GetPivot().Position
-                    print("Player Pos: " .. tostring(playerPos) .. " || Item: " .. itemModel:GetFullName() .. " || Item Pos: " .. tostring(itemPos))
-                    -------------------------------------------
-
-                    -- 1. Get the item's original, intended grab range
-                    local originalRange = originalPromptDistances[prompt] or prompt.MaxActivationDistance
                     
-                    -- 2. Calculate the total range based on the slider's percentage
-                    -- Formula: original * (1 + (percent / 100))
+                    ---[[ THE ONLY CHANGE IS ON THIS LINE ]]---
+                    -- Instead of getting the position from the model, get it from the prompt's direct parent part.
+                    local itemPosition = prompt.Parent.Position
+                    
+                    local originalRange = originalPromptDistances[prompt] or prompt.MaxActivationDistance
                     local totalRange = originalRange * (1 + (Config.RadiusPercent / 100))
-
-                    -- 3. Get the player's actual distance to the item
-                    local distance = (itemModel:GetPivot().Position - playerRoot.Position).Magnitude
-                    -- 4. Only trigger if the player is within the new total range
+                    local distance = (itemPosition - playerRoot.Position).Magnitude -- Use the new itemPosition variable
+                    
                     if distance <= totalRange then
-                        print("Currency near! trigger proximity")
+                        print("triggered proximity prompt")
                         forceTriggerPrompt(prompt)
                     end
                 else
@@ -159,6 +152,7 @@ function Module.CreateTab(Window, Network)
                 end
             end
         end
+
 
         -- ESP Visual Update Logic
         for object, visuals in pairs(trackedObjects) do
