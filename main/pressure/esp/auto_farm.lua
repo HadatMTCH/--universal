@@ -136,6 +136,10 @@ function Module.CreateTab(Window, Network)
                     local itemModel = prompt.Parent.Parent
                     
                     -- 1. Get the item's original, intended grab range
+                    print("originalPromptDistances[prompt]")
+                    print(originalPromptDistances[prompt])
+                    print("prompt.MaxActivationDistance")
+                    print(prompt.MaxActivationDistance)
                     local originalRange = originalPromptDistances[prompt] or prompt.MaxActivationDistance
                     
                     -- 2. Calculate the total range based on the slider's percentage
@@ -144,7 +148,7 @@ function Module.CreateTab(Window, Network)
 
                     -- 3. Get the player's actual distance to the item
                     local distance = (itemModel:GetPivot().Position - playerRoot.Position).Magnitude
-                    
+                    print(distance)
                     -- 4. Only trigger if the player is within the new total range
                     if distance <= totalRange then
                         forceTriggerPrompt(prompt)
