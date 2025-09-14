@@ -111,6 +111,10 @@ function Module.CreateTab(Window, Network)
 
         originalPromptDistances[object] = object.MaxActivationDistance
         if parentModel:GetAttribute("Amount") then
+            print("Currency section Parent Name")
+            print(parentModel.Name)
+            print("Currency section Object Name")
+            print(object.Name)
             local amount = parentModel:GetAttribute("Amount")
             createVisuals(parentModel, "Currency", Color3.fromRGB(255, 220, 0), "Currency ("..amount..")")
             table.insert(promptsToGrab, object)
