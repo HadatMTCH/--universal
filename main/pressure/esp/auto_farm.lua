@@ -111,19 +111,14 @@ function Module.CreateTab(Window, Network)
 
         originalPromptDistances[object] = object.MaxActivationDistance
         if parentModel:GetAttribute("Amount") then
-            print("Currency section Parent Name")
-            print(parentModel.Name)
-            print("Currency section Object Name")
-            print(object.Name)
             local amount = parentModel:GetAttribute("Amount")
             createVisuals(parentModel, "Currency", Color3.fromRGB(255, 220, 0), "Currency ("..amount..")")
             table.insert(promptsToGrab, object)
-        elseif not parentModel:FindFirstChild("Enter", true) then
-            print("Item section Parent Name")
-            print(parentModel.Name)
-            print("Item section Object Name")
-            print(object.Name)
-             createVisuals(parentModel, "Item", Color3.fromRGB(0, 180, 255), "Item")
+        elseif parentModel:GetAttribute("AmmoAmount") or parentModel:GetAttribute("Shell") then
+            print("ammo detected")
+            local amount = parentModel:GetAttribute("AmmoAmount") or parentModel:GetAttribute("Shell")
+            createVisuals(parentModel, "Ammo", Color3.fromRGB(11, 255, 3), "Ammo ("..amount..")")
+            table.insert(promptsToGrab, object)
         end
     end
     
@@ -145,7 +140,7 @@ function Module.CreateTab(Window, Network)
                     ---[[ THE ONLY CHANGE IS ON THIS LINE ]]---
                     -- Instead of getting the position from the model, get it from the prompt's direct parent part.
                     local itemPosition = prompt.Parent.Position
-                    
+                    print(prompt.Parent.Name)
                     local originalRange = originalPromptDistances[prompt] or prompt.MaxActivationDistance
                     local totalRange = originalRange * (1 + (Config.RadiusPercent / 100))
                     local distance = (itemPosition - playerRoot.Position).Magnitude -- Use the new itemPosition variable
@@ -165,7 +160,7 @@ function Module.CreateTab(Window, Network)
             if not object or not object.Parent then
                 cleanupVisuals(object)
             else
-                local shouldBeVisible = (visuals.Type == "Currency" and Config.EnableCurrencyESP) or (visuals.Type == "Item" and Config.EnableItemESP)
+                local shouldBeVisible = (visuals.Type == "Ammo" and Config.EnableCurrencyESP) or (visuals.Type == "Currency" and Config.EnableCurrencyESP) or (visuals.Type == "Item" and Config.EnableItemESP)
                 visuals.Highlight.Enabled = shouldBeVisible
                 visuals.Billboard.Enabled = shouldBeVisible
 
@@ -180,11 +175,11 @@ function Module.CreateTab(Window, Network)
     -- UI Creation
     local FarmTab = Window:CreateTab("Pressure Farm", "badge-dollar-sign")
     FarmTab:CreateSection("ESP Settings")
-    FarmTab:CreateToggle({ Name = "Currency ESP", CurrentValue = Config.EnableCurrencyESP, Callback = function(v) Config.EnableCurrencyESP = v end })
+    FarmTab:CreateToggle({ Name = "Collectible ESP", CurrentValue = Config.EnableCurrencyESP, Callback = function(v) Config.EnableCurrencyESP = v end })
     FarmTab:CreateToggle({ Name = "Item ESP", CurrentValue = Config.EnableItemESP, Callback = function(v) Config.EnableItemESP = v end })
 
     FarmTab:CreateSection("Auto-Farm Settings")
-    FarmTab:CreateToggle({ Name = "Auto Grab Currency", CurrentValue = Config.EnableAutoGrab, Callback = function(v) Config.EnableAutoGrab = v end })
+    FarmTab:CreateToggle({ Name = "Auto Grab Collectible", CurrentValue = Config.EnableAutoGrab, Callback = function(v) Config.EnableAutoGrab = v end })
     
     FarmTab:CreateSlider({ 
         Name = "Grab Radius Multiplier", 
