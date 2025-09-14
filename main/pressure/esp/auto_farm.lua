@@ -104,6 +104,7 @@ function Module.CreateTab(Window, Network)
     -- Central function to identify all collectible objects
     local function processObject(object)
         if not object or not object.Parent or not object:IsA("ProximityPrompt") then return end
+        if object.HoldDuration == 0 then return end
         if originalPromptDistances[object] then return end -- Already processed
 
         local parentModel = object.Parent and object.Parent.Parent
@@ -140,7 +141,6 @@ function Module.CreateTab(Window, Network)
                     ---[[ THE ONLY CHANGE IS ON THIS LINE ]]---
                     -- Instead of getting the position from the model, get it from the prompt's direct parent part.
                     local itemPosition = prompt.Parent.Position
-                    print(prompt.Parent.Name)
                     local originalRange = originalPromptDistances[prompt] or prompt.MaxActivationDistance
                     local totalRange = originalRange * (1 + (Config.RadiusPercent / 100))
                     local distance = (itemPosition - playerRoot.Position).Magnitude -- Use the new itemPosition variable
