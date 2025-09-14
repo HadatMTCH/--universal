@@ -115,10 +115,10 @@ function Module.CreateTab(Window, Network)
             createVisuals(parentModel, "Currency", Color3.fromRGB(255, 220, 0), "Currency ("..amount..")")
             table.insert(promptsToGrab, object)
         elseif not parentModel:FindFirstChild("Enter", true) then
-            print("Item section")
+            print("Item section Parent Name")
             print(parentModel.Name)
+            print("Item section Object Name")
             print(object.Name)
-            print("Item section")
              createVisuals(parentModel, "Item", Color3.fromRGB(0, 180, 255), "Item")
         end
     end
