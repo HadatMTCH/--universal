@@ -7,16 +7,17 @@ function Module.CreateTab(Window, Network)
     local Workspace = game:GetService("Workspace")
     local LocalPlayer = Players.LocalPlayer
 
-    -- Configuration table
     local Config = {
         EnableCurrencyESP = true,
         EnableItemESP = true,
         EnableAutoGrab = false,
+        RadiusPercent = 0
     }
 
     -- State tables
     local trackedObjects = {}
     local promptsToGrab = {}
+    local originalPromptDistances = {} -- NEW: Table to store original distances
     local screenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
     screenGui.Name = "AutofarmESP_Gui"
     screenGui.ResetOnSpawn = false
@@ -103,9 +104,12 @@ function Module.CreateTab(Window, Network)
     -- Central function to identify all collectible objects
     local function processObject(object)
         if not object or not object.Parent or not object:IsA("ProximityPrompt") then return end
+        if originalPromptDistances[object] then return end -- Already processed
 
         local parentModel = object.Parent and object.Parent.Parent
         if not (parentModel and parentModel:IsA("Model")) then return end
+
+        originalPromptDistances[object] = object.MaxActivationDistance
 
         if parentModel:GetAttribute("Amount") then
             local amount = parentModel:GetAttribute("Amount")
@@ -125,12 +129,26 @@ function Module.CreateTab(Window, Network)
         local playerRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
         if not playerRoot then return end
 
-        -- UPDATED: Auto Grab Logic now uses the advanced trigger function
         if Config.EnableAutoGrab then
             for i = #promptsToGrab, 1, -1 do
                 local prompt = promptsToGrab[i]
-                if prompt and prompt.Parent then
-                    forceTriggerPrompt(prompt)
+                if prompt and prompt.Parent and prompt.Parent.Parent then
+                    local itemModel = prompt.Parent.Parent
+                    
+                    -- 1. Get the item's original, intended grab range
+                    local originalRange = originalPromptDistances[prompt] or prompt.MaxActivationDistance
+                    
+                    -- 2. Calculate the total range based on the slider's percentage
+                    -- Formula: original * (1 + (percent / 100))
+                    local totalRange = originalRange * (1 + (Config.RadiusPercent / 100))
+
+                    -- 3. Get the player's actual distance to the item
+                    local distance = (itemModel:GetPivot().Position - playerRoot.Position).Magnitude
+                    
+                    -- 4. Only trigger if the player is within the new total range
+                    if distance <= totalRange then
+                        forceTriggerPrompt(prompt)
+                    end
                 else
                     table.remove(promptsToGrab, i)
                 end
@@ -162,6 +180,16 @@ function Module.CreateTab(Window, Network)
 
     FarmTab:CreateSection("Auto-Farm Settings")
     FarmTab:CreateToggle({ Name = "Auto Grab Currency", CurrentValue = Config.EnableAutoGrab, Callback = function(v) Config.EnableAutoGrab = v end })
+    
+    FarmTab:CreateSlider({ 
+        Name = "Grab Radius Multiplier", 
+        Range = {0, 100}, -- Slider from 0% to 100%
+        Increment = 5, 
+        Suffix = "% Extra", 
+        CurrentValue = Config.RadiusPercent, 
+        Flag = "Pressure_GrabRadiusPercent",
+        Callback = function(v) Config.RadiusPercent = v end 
+    })
 end
 
 return Module
