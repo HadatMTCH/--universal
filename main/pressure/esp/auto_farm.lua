@@ -134,12 +134,13 @@ function Module.CreateTab(Window, Network)
                 local prompt = promptsToGrab[i]
                 if prompt and prompt.Parent and prompt.Parent.Parent then
                     local itemModel = prompt.Parent.Parent
-                    
+                    ---[[ NEW DEBUG LOGS: Add this block ]]---
+                    local playerPos = playerRoot.Position
+                    local itemPos = itemModel:GetPivot().Position
+                    print("Player Pos: " .. tostring(playerPos) .. " || Item: " .. itemModel:GetFullName() .. " || Item Pos: " .. tostring(itemPos))
+                    -------------------------------------------
+
                     -- 1. Get the item's original, intended grab range
-                    print("originalPromptDistances[prompt]")
-                    print(originalPromptDistances[prompt])
-                    print("prompt.MaxActivationDistance")
-                    print(prompt.MaxActivationDistance)
                     local originalRange = originalPromptDistances[prompt] or prompt.MaxActivationDistance
                     
                     -- 2. Calculate the total range based on the slider's percentage
@@ -148,7 +149,6 @@ function Module.CreateTab(Window, Network)
 
                     -- 3. Get the player's actual distance to the item
                     local distance = (itemModel:GetPivot().Position - playerRoot.Position).Magnitude
-                    print(distance)
                     -- 4. Only trigger if the player is within the new total range
                     if distance <= totalRange then
                         print("Currency near! trigger proximity")
