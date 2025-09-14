@@ -79,7 +79,7 @@ function Module.CreateTab(Window, Network)
         prompt.Enabled = true
         
         -- 3. Fire the unrestricted prompt using the network library
-        Network:FireProximityPrompt(prompt)
+        Network.Other:FireProximityPrompt(prompt)
         
         -- A brief wait is crucial for the game to process the event
         RunService.Heartbeat:Wait()
