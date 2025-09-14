@@ -1,6 +1,7 @@
 local Module = {}
 
 function Module.CreateTab(Window, Network)
+    -- Services & Player
     local Players = game:GetService("Players")
     local RunService = game:GetService("RunService")
     local Workspace = game:GetService("Workspace")
@@ -9,9 +10,8 @@ function Module.CreateTab(Window, Network)
     -- Configuration table
     local Config = {
         EnableCurrencyESP = true,
-        EnableItemESP = false,
+        EnableItemESP = true,
         EnableAutoGrab = false,
-        Radius = 40
     }
 
     -- State tables
@@ -55,6 +55,51 @@ function Module.CreateTab(Window, Network)
         end
     end
 
+    local triggerCooldowns = {}
+    local function forceTriggerPrompt(prompt)
+        if not prompt or not prompt.Parent or triggerCooldowns[prompt] then return end
+
+        triggerCooldowns[prompt] = true
+        
+        -- 1. Save the prompt's original properties
+        local originalParent = prompt.Parent
+        local originalMaxDistance = prompt.MaxActivationDistance
+        local originalLineOfSight = prompt.RequiresLineOfSight
+        local originalEnabled = prompt.Enabled
+
+        -- 2. Create a temporary part to hold the prompt and modify it
+        local tempPart = Instance.new("Part", workspace.CurrentCamera)
+        tempPart.Transparency = 1
+        tempPart.CanCollide = false
+        tempPart.Anchored = true
+        
+        prompt.Parent = tempPart
+        prompt.MaxActivationDistance = math.huge
+        prompt.RequiresLineOfSight = false
+        prompt.Enabled = true
+        
+        -- 3. Fire the unrestricted prompt using the network library
+        Network:FireProximityPrompt(prompt)
+        
+        -- A brief wait is crucial for the game to process the event
+        RunService.Heartbeat:Wait()
+
+        -- 4. Restore all original properties and clean up
+        if prompt.Parent == tempPart then
+            prompt.Parent = originalParent
+            prompt.MaxActivationDistance = originalMaxDistance
+            prompt.RequiresLineOfSight = originalLineOfSight
+            prompt.Enabled = originalEnabled
+        end
+        tempPart:Destroy()
+        
+        -- Add a small cooldown before this prompt can be triggered again
+        task.delay(0.2, function()
+            triggerCooldowns[prompt] = nil
+        end)
+    end
+
+
     -- Central function to identify all collectible objects
     local function processObject(object)
         if not object or not object.Parent or not object:IsA("ProximityPrompt") then return end
@@ -62,13 +107,10 @@ function Module.CreateTab(Window, Network)
         local parentModel = object.Parent and object.Parent.Parent
         if not (parentModel and parentModel:IsA("Model")) then return end
 
-        -- Check if it's a Currency item
         if parentModel:GetAttribute("Amount") then
             local amount = parentModel:GetAttribute("Amount")
             createVisuals(parentModel, "Currency", Color3.fromRGB(255, 220, 0), "Currency ("..amount..")")
             table.insert(promptsToGrab, object)
-
-        -- Check if it's a generic Item (and not a Locker)
         elseif not parentModel:FindFirstChild("Enter", true) then
              createVisuals(parentModel, "Item", Color3.fromRGB(0, 180, 255), "Item")
         end
@@ -83,21 +125,12 @@ function Module.CreateTab(Window, Network)
         local playerRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
         if not playerRoot then return end
 
-        -- Auto Grab Logic
+        -- UPDATED: Auto Grab Logic now uses the advanced trigger function
         if Config.EnableAutoGrab then
-            for i = #promptsToGrab, 1, -1 do -- Loop backwards when removing items
+            for i = #promptsToGrab, 1, -1 do
                 local prompt = promptsToGrab[i]
                 if prompt and prompt.Parent then
-                    local itemModel = prompt.Parent.Parent
-                    if itemModel then
-                        if (itemModel:GetPivot().Position - playerRoot.Position).Magnitude <= Config.Radius then
-                            Network:FireProximityPrompt(prompt, false) -- Use the Network library
-                        end
-                    else
-                        -- If the model doesn't exist, the prompt is invalid, so remove it.
-                        table.remove(promptsToGrab, i)
-                    end
-
+                    forceTriggerPrompt(prompt)
                 else
                     table.remove(promptsToGrab, i)
                 end
@@ -120,7 +153,7 @@ function Module.CreateTab(Window, Network)
             end
         end
     end)
-    
+
     -- UI Creation
     local FarmTab = Window:CreateTab("Pressure Farm", "badge-dollar-sign")
     FarmTab:CreateSection("ESP Settings")
