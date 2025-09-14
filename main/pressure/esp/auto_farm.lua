@@ -7,17 +7,21 @@ function Module.CreateTab(Window, Network)
     local Workspace = game:GetService("Workspace")
     local LocalPlayer = Players.LocalPlayer
 
+    -- UPDATED: Configuration table now includes Ammo
     local Config = {
         EnableCurrencyESP = true,
         EnableItemESP = true,
-        EnableAutoGrab = false,
-        RadiusPercent = 0
+        EnableAmmoESP = true, -- NEW
+        EnableAutoGrabCurrency = false,
+        EnableAutoGrabAmmo = false, -- NEW
+        ExtraRadiusPercent = 50
     }
 
     -- State tables
     local trackedObjects = {}
-    local promptsToGrab = {}
-    local originalPromptDistances = {} -- NEW: Table to store original distances
+    local promptsToGrabCurrency = {}
+    local promptsToGrabAmmo = {} -- NEW
+    local originalPromptDistances = {}
     local screenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
     screenGui.Name = "AutofarmESP_Gui"
     screenGui.ResetOnSpawn = false
@@ -103,20 +107,33 @@ function Module.CreateTab(Window, Network)
 
     -- Central function to identify all collectible objects
     local function processObject(object)
-        if not object or not object.Parent or not object:IsA("ProximityPrompt") then return end
-        if originalPromptDistances[object] then return end -- Already processed
+        -- Check for ProximityPrompt first, as it's common to all our targets
+        if object:IsA("ProximityPrompt") then
+            if originalPromptDistances[object] then return end -- Already processed this prompt
 
-        local parentModel = object.Parent and object.Parent.Parent
-        if not (parentModel and parentModel:IsA("Model")) then return end
+            local parentModel = object.Parent and object.Parent.Parent
+            if not (parentModel and parentModel:IsA("Model")) then return end
 
-        originalPromptDistances[object] = object.MaxActivationDistance
+            originalPromptDistances[object] = object.MaxActivationDistance
 
-        if parentModel:GetAttribute("Amount") then
-            local amount = parentModel:GetAttribute("Amount")
-            createVisuals(parentModel, "Currency", Color3.fromRGB(255, 220, 0), "Currency ("..amount..")")
-            table.insert(promptsToGrab, object)
-        elseif not parentModel:FindFirstChild("Enter", true) then
-             createVisuals(parentModel, "Item", Color3.fromRGB(0, 180, 255), "Item")
+            -- Check if it's a Currency item
+            if parentModel:GetAttribute("Amount") then
+                local amount = parentModel:GetAttribute("Amount")
+                createVisuals(parentModel, "Currency", Color3.fromRGB(255, 220, 0), "Currency ("..amount..")")
+                table.insert(promptsToGrabCurrency, object)
+            -- Check if it's a generic Item
+            elseif not parentModel:FindFirstChild("Enter", true) then
+                 createVisuals(parentModel, "Item", Color3.fromRGB(0, 180, 255), "Item")
+            end
+        
+        -- NEW: Check for Ammo models by name, based on your ammo.lua logic
+        elseif object:IsA("Model") and (object.Name == "SmallAmmoBox" or object.Name:match("^%d+Shells?%d+$")) then
+            local prompt = object:FindFirstChildOfClass("ProximityPrompt", true)
+            if prompt and not originalPromptDistances[prompt] then -- Make sure it has a prompt we haven't seen
+                originalPromptDistances[prompt] = prompt.MaxActivationDistance
+                createVisuals(object, "Ammo", Color3.fromRGB(0, 255, 100), "Ammo")
+                table.insert(promptsToGrabAmmo, prompt)
+            end
         end
     end
     
@@ -129,45 +146,61 @@ function Module.CreateTab(Window, Network)
         local playerRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
         if not playerRoot then return end
 
-        -- Auto Grab Logic
+        -- Auto Grab Logic (This part is correct and remains the same)
         if Config.EnableAutoGrab then
-            for i = #promptsToGrab, 1, -1 do
-                local prompt = promptsToGrab[i]
-                if prompt and prompt.Parent and prompt.Parent.Parent then
-                    
-                    ---[[ THE ONLY CHANGE IS ON THIS LINE ]]---
-                    -- Instead of getting the position from the model, get it from the prompt's direct parent part.
-                    local itemPosition = prompt.Parent.Position
-                    
-                    local originalRange = originalPromptDistances[prompt] or prompt.MaxActivationDistance
-                    local totalRange = originalRange * (1 + (Config.RadiusPercent / 100))
-                    local distance = (itemPosition - playerRoot.Position).Magnitude -- Use the new itemPosition variable
-                    
-                    if distance <= totalRange then
-                        print("triggered proximity prompt")
-                        forceTriggerPrompt(prompt)
-                    end
+            for i = #promptsToGrabCurrency, 1, -1 do
+                local prompt = promptsToGrabCurrency[i]
+                if prompt and prompt.Parent then
+                    forceTriggerPrompt(prompt)
                 else
-                    table.remove(promptsToGrab, i)
+                    table.remove(promptsToGrabCurrency, i)
+                end
+            end
+        end
+        if Config.EnableAutoGrabAmmo then
+            for i = #promptsToGrabAmmo, 1, -1 do
+                local prompt = promptsToGrabAmmo[i]
+                if prompt and prompt.Parent then
+                    forceTriggerPrompt(prompt)
+                else
+                    table.remove(promptsToGrabAmmo, i)
                 end
             end
         end
 
-
         -- ESP Visual Update Logic
         for object, visuals in pairs(trackedObjects) do
+            
+            ---[[ UPDATED: Logic to remove 'goto' ]]---
+            -- First, we determine if the ESP for this object should be removed.
+            local shouldBeCleaned = false
             if not object or not object.Parent then
+                shouldBeCleaned = true
+            elseif visuals.Type == "Currency" or visuals.Type == "Ammo" or visuals.Type == "Item" then
+                if not object:FindFirstChildOfClass("ProximityPrompt", true) then
+                    shouldBeCleaned = true -- Mark for cleanup if the prompt is gone
+                end
+            end
+
+            -- Now, we either clean it up OR update it.
+            if shouldBeCleaned then
                 cleanupVisuals(object)
             else
-                local shouldBeVisible = (visuals.Type == "Currency" and Config.EnableCurrencyESP) or (visuals.Type == "Item" and Config.EnableItemESP)
+                -- If it's still valid, update its visuals. All update logic now goes in this else block.
+                local shouldBeVisible = 
+                    (visuals.Type == "Currency" and Config.EnableCurrencyESP) or 
+                    (visuals.Type == "Item" and Config.EnableItemESP) or
+                    (visuals.Type == "Ammo" and Config.EnableAmmoESP)
+                
                 visuals.Highlight.Enabled = shouldBeVisible
                 visuals.Billboard.Enabled = shouldBeVisible
 
                 if shouldBeVisible then
-                    local distance = (playerRoot.Position - object:GetPivot().Position).Magnitude
+                    local distance = (playerRoot.Position - visuals.Adornee.Position).Magnitude
                     visuals.Text.Text = visuals.BaseText .. string.format(" [%dM]", distance)
                 end
             end
+            ---------------------------------------------
         end
     end)
 
@@ -176,19 +209,11 @@ function Module.CreateTab(Window, Network)
     FarmTab:CreateSection("ESP Settings")
     FarmTab:CreateToggle({ Name = "Currency ESP", CurrentValue = Config.EnableCurrencyESP, Callback = function(v) Config.EnableCurrencyESP = v end })
     FarmTab:CreateToggle({ Name = "Item ESP", CurrentValue = Config.EnableItemESP, Callback = function(v) Config.EnableItemESP = v end })
+    FarmTab:CreateToggle({ Name = "Ammo ESP", CurrentValue = Config.EnableAmmoESP, Callback = function(v) Config.EnableAmmoESP = v end }) -- NEW
 
     FarmTab:CreateSection("Auto-Farm Settings")
-    FarmTab:CreateToggle({ Name = "Auto Grab Currency", CurrentValue = Config.EnableAutoGrab, Callback = function(v) Config.EnableAutoGrab = v end })
-    
-    FarmTab:CreateSlider({ 
-        Name = "Grab Radius Multiplier", 
-        Range = {0, 100}, -- Slider from 0% to 100%
-        Increment = 5, 
-        Suffix = "% Extra", 
-        CurrentValue = Config.RadiusPercent, 
-        Flag = "Pressure_GrabRadiusPercent",
-        Callback = function(v) Config.RadiusPercent = v end 
-    })
+    FarmTab:CreateToggle({ Name = "Auto Grab Currency", CurrentValue = Config.EnableAutoGrabCurrency, Callback = function(v) Config.EnableAutoGrabCurrency = v end })
+    FarmTab:CreateToggle({ Name = "Auto Grab Ammo", CurrentValue = Config.EnableAutoGrabAmmo, Callback = function(v) Config.EnableAutoGrabAmmo = v end }) -- NEW
 end
 
 return Module
