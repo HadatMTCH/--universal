@@ -162,7 +162,6 @@ function Module.CreateTab(Window, Network)
 
     FarmTab:CreateSection("Auto-Farm Settings")
     FarmTab:CreateToggle({ Name = "Auto Grab Currency", CurrentValue = Config.EnableAutoGrab, Callback = function(v) Config.EnableAutoGrab = v end })
-    FarmTab:CreateSlider({ Name = "Grab Radius", Range = {10, 100}, Increment = 5, Suffix = "m", CurrentValue = Config.Radius, Callback = function(v) Config.Radius = v end })
 end
 
 return Module
