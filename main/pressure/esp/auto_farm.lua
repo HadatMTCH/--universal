@@ -104,7 +104,6 @@ function Module.CreateTab(Window, Network)
     -- Central function to identify all collectible objects
     local function processObject(object)
         if not object or not object.Parent or not object:IsA("ProximityPrompt") then return end
-        if object.HoldDuration == 0 then return end
         if originalPromptDistances[object] then return end -- Already processed
 
         local parentModel = object.Parent and object.Parent.Parent
