@@ -1,6 +1,7 @@
 local Rayfield =
     loadstring(game:HttpGet('https://raw.githubusercontent.com/SiriusSoftwareLtd/Rayfield/main/source.lua'))()
 local Sense = loadstring(game:HttpGet("https://raw.githubusercontent.com/HadatMTCH/--universal/refs/heads/master/main/lib/sense/sense.lua"))()
+local Network = loadstring(game:HttpGet("https://raw.githubusercontent.com/HadatMTCH/--universal/refs/heads/main/main/lib/network/network.lua"))()
 
 local Window = Rayfield:CreateWindow({
     Name = "Universal Script",
@@ -41,6 +42,10 @@ monsterEsp.CreateTab(Window)
 -- Heartburn ammo esp
 -- local ammoEsp = loadstring(game:HttpGet("https://raw.githubusercontent.com/HadatMTCH/--universal/refs/heads/master/main/pressure/esp/ammo.lua"))()
 -- ammoEsp.CreateTab(Window)
+
+-- ESP and Aura inspired from firelib
+local autoFarm = loadstring(game:HttpGet("https://raw.githubusercontent.com/HadatMTCH/--universal/refs/heads/main/main/pressure/esp/auto_farm.lua"))()
+autoFarm.CreateTab(Window, Network)
 
 Rayfield:LoadConfiguration()
 Sense.Load()
