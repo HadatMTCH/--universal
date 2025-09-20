@@ -47,7 +47,7 @@ local function loadWithTimeout(url: string, timeout: number?): ...any
 
 	local timeoutThread = task.delay(timeout, function()
 		if not requestCompleted then
-			warn(`Request for {url} timed out after {timeout} seconds`)
+			warn("Request for " .. url .. " timed out after " .. timeout .. " seconds")
 			task.cancel(requestThread)
 			result = "Request timed out"
 			requestCompleted = true
@@ -63,7 +63,7 @@ local function loadWithTimeout(url: string, timeout: number?): ...any
 		task.cancel(timeoutThread)
 	end
 	if not success then
-		warn(`Failed to process {url}: {result}`)
+		warn("Failed to process " .. url .. ": " .. tostring(result))
 	end
 	return if success then result else nil
 end
@@ -95,8 +95,9 @@ local function overrideSetting(category: string, name: string, value: any)
 end
 
 local function getSetting(category: string, name: string): any
-	if overriddenSettings[`{category}.{name}`] ~= nil then
-		return overriddenSettings[`{category}.{name}`]
+	local key = category .. "." .. name
+	if overriddenSettings[key] ~= nil then
+		return overriddenSettings[key]
 	elseif settingsTable[category][name] ~= nil then
 		return settingsTable[category][name].Value
 	end
@@ -809,7 +810,7 @@ local function getIcon(name : string): {id: number, imageRectSize: Vector2, imag
 	local sizedicons = Icons['48px']
 	local r = sizedicons[name]
 	if not r then
-		error(`Lucide Icons: Failed to find icon by the name of "{name}"`, 2)
+		error("Lucide Icons: Failed to find icon by the name of \"" .. name .. "\"", 2)
 	end
 
 	local rirs = r[2]
@@ -1189,7 +1190,7 @@ local function Hide(notify: boolean?)
 		if useMobilePrompt then 
 			RayfieldLibrary:Notify({Title = "Interface Hidden", Content = "The interface has been hidden, you can unhide the interface by tapping 'Show'.", Duration = 7, Image = 4400697855})
 		else
-			RayfieldLibrary:Notify({Title = "Interface Hidden", Content = `The interface has been hidden, you can unhide the interface by tapping {getSetting("General", "rayfieldOpen")}.`, Duration = 7, Image = 4400697855})
+			RayfieldLibrary:Notify({Title = "Interface Hidden", Content = "The interface has been hidden, you can unhide the interface by tapping " .. getSetting("General", "rayfieldOpen") .. ".", Duration = 7, Image = 4400697855})
 		end
 	end
 
