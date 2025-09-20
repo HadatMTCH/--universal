@@ -6,6 +6,7 @@ function Module.CreateTab(Window)
     local Players = game:GetService("Players")
     local RunService = game:GetService("RunService")
     local TweenService = game:GetService("TweenService")
+    local UserInputService = game:GetService("UserInputService") -- NEW: Added UserInputService
     local LocalPlayer = Players.LocalPlayer
     local Camera = Workspace.CurrentCamera
 
@@ -411,6 +412,35 @@ function Module.CreateTab(Window)
             end
         end
     })
+
+        ---[[ NEW: Manual Hide Button ]]---
+    NPC_ESPTab:CreateButton({
+        Name = "Manual Hide / Return (M)",
+        Callback = function()
+            -- Check if we are currently hiding or not and do the opposite action
+            if AutoHideState.isHiding then
+                returnToGround()
+            else
+                -- When hiding manually, we don't have a monster count, so we pass 1
+                startHiding(1)
+            end
+        end
+    })
+
+    ---[[ NEW: Keybind Listener for Manual Hide ]]---
+    UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
+        -- Ignore input if the player is typing in chat
+        if gameProcessedEvent then return end
+
+        -- Check if the pressed key is 'M'
+        if input.KeyCode == Enum.KeyCode.M then
+            if AutoHideState.isHiding then
+                returnToGround()
+            else
+                startHiding(1)
+            end
+        end
+    end)
 end
 
 return Module
