@@ -23,46 +23,34 @@ function Module.CreateTab(Window)
             return
         end
 
-        ---[[ NEW: Cleanup old highlights before starting ]]---
-        for _, stroke in ipairs(activeHighlights) do
-            if stroke and stroke.Parent then
-                stroke:Destroy()
-            end
-        end
-        activeHighlights = {} -- Reset the table
-        ----------------------------------------------------
-
         local correctAnswerButton = nil
 
         -- Loop through all the answer frames (Answer1, Answer2, etc.)
         for _, answerFrame in ipairs(answersFrame:GetChildren()) do
             if answerFrame:IsA("Frame") then
-                -- The game's script sets a "Choice" attribute on the correct answer.
-                -- Incorrect answers have this attribute as nil.
                 if answerFrame:GetAttribute("Choice") ~= nil then
                     correctAnswerButton = answerFrame:FindFirstChild("TextButton")
-                    break -- We found the correct one, no need to loop further
+                    break
                 end
             end
         end
 
         if correctAnswerButton then
-             -- Action 1: Highlight the correct answer
+            -- Action 1: Highlight the correct answer
             if SolverConfig.Highlight then
                 local stroke = Instance.new("UIStroke")
                 stroke.Color = Color3.fromRGB(0, 255, 127) -- Bright green
                 stroke.Thickness = 2
                 stroke.Parent = correctAnswerButton
-                table.insert(activeHighlights, stroke) -- NEW: Store the new highlight
             end
 
             -- Action 2: Auto-select the correct answer
             if SolverConfig.AutoSelect then
                 task.wait(SolverConfig.SelectDelay)
 
-                -- Check if the UI is still visible before clicking
                 if notebookUI and notebookUI.Parent then
-                    correctAnswerButton.Activated:Fire()
+                    ---[[ THIS IS THE CORRECTED LINE ]]---
+                    firesignal(correctAnswerButton.Activated)
                 end
             end
         end
